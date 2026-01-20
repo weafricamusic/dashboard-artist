@@ -39,6 +39,9 @@ yarn-error.log*
 # local Firebase service account (development only)
 firebase-service-account.json
 
+# local editor settings
+.vscode/
+
 # vercel
 .vercel
 
