@@ -23,7 +23,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="theme-dark" suppressHydrationWarning>
+      <head>
+        <script
+          // Apply theme before the app renders to prevent flicker.
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('weafrica_theme');if(!t){t='dark';localStorage.setItem('weafrica_theme',t);}document.documentElement.classList.remove('theme-dark','theme-light');document.documentElement.classList.add(t==='light'?'theme-light':'theme-dark');}catch(e){}})();",
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
