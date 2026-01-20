@@ -95,20 +95,26 @@ function getServiceAccountFromEnv(): {
 }
 
 export function getFirebaseAdminAuth() {
-  if (!hasFirebaseAdminEnv()) {
+  if (!hasFirebaseAdminEnv()) return null;
+
+  try {
+    if (getApps().length === 0) {
+      const { projectId, clientEmail, privateKey } = getServiceAccountFromEnv();
+      initializeApp({
+        credential: cert({
+          projectId,
+          clientEmail,
+          privateKey,
+        }),
+      });
+    }
+
+    return getAuth();
+  } catch (err) {
+    // Misconfigured env (invalid JSON, missing file, bad key formatting, etc.) should not
+    // crash the entire app in production. Routes can treat "null" as "not configured".
+    const message = err instanceof Error ? err.message : String(err ?? "");
+    console.error("Firebase Admin initialization failed:", message);
     return null;
   }
-
-  if (getApps().length === 0) {
-    const { projectId, clientEmail, privateKey } = getServiceAccountFromEnv();
-    initializeApp({
-      credential: cert({
-        projectId,
-        clientEmail,
-        privateKey,
-      }),
-    });
-  }
-
-  return getAuth();
 }
