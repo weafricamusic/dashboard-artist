@@ -12,6 +12,16 @@ type ActionState = {
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 const MAX_VIDEO_SECONDS = 60;
 
+function isMp4OrMovFile(file: File): boolean {
+  const type = (file.type || "").toLowerCase();
+  const name = (file.name || "").toLowerCase();
+
+  // iOS often reports camera videos as video/quicktime (.mov).
+  const byType = type === "video/mp4" || type === "video/quicktime";
+  const byExt = name.endsWith(".mp4") || name.endsWith(".mov");
+  return byType || (byExt && (type === "" || type === "application/octet-stream"));
+}
+
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 MB";
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -118,8 +128,8 @@ export function UploadVideoForm() {
   const handleSelect = async (nextFile: File | null) => {
     if (!nextFile) return;
 
-    if (nextFile.type !== "video/mp4") {
-      setError("Only MP4 videos are supported.");
+    if (!isMp4OrMovFile(nextFile)) {
+      setError("Only MP4 or MOV videos are supported.");
       setFile(null);
       setDuration(null);
       setPreviewUrl(null);
@@ -228,8 +238,8 @@ export function UploadVideoForm() {
             ref={inputRef}
             type="file"
             name="videoFile"
-            accept="video/mp4"
-            className="hidden"
+            accept="video/mp4,video/quicktime,.mp4,.mov"
+            className="sr-only"
             onChange={(event) => handleSelect(event.target.files?.[0] ?? null)}
           />
 

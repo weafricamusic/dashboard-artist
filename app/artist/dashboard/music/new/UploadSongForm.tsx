@@ -260,7 +260,7 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
             type="file"
             name="audioFile"
             accept="audio/mpeg,audio/mp3"
-            className="hidden"
+            className="sr-only"
             onChange={(event) => handleAudioSelect(event.target.files?.[0] ?? null)}
           />
 
@@ -345,7 +345,7 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
             type="file"
             name="coverImage"
             accept="image/jpeg,image/png"
-            className="hidden"
+            className="sr-only"
             onChange={(event) => handleCoverSelect(event.target.files?.[0] ?? null)}
           />
 

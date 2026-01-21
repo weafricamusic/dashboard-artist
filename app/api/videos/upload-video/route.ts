@@ -9,6 +9,24 @@ export const runtime = "nodejs";
 
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
+function isMp4OrMovUpload(file: File): boolean {
+  const type = (file.type || "").toLowerCase();
+  const name = (file.name || "").toLowerCase();
+  const byType = type === "video/mp4" || type === "video/quicktime";
+  const byExt = name.endsWith(".mp4") || name.endsWith(".mov");
+  return byType || (byExt && (type === "" || type === "application/octet-stream"));
+}
+
+function looksLikeBodyTooLarge(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err ?? "")).toLowerCase();
+  return (
+    msg.includes("too large") ||
+    msg.includes("body size") ||
+    msg.includes("body limit") ||
+    msg.includes("request entity")
+  );
+}
+
 export async function POST(request: NextRequest) {
   const verified = await requireVerifiedArtistFromRequest(request);
   if (!verified.ok) {
@@ -18,7 +36,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const form = await request.formData();
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch (err) {
+    const message = "Could not read uploaded form data. The file may be too large for the server.";
+    return NextResponse.json(
+      { error: message },
+      { status: looksLikeBodyTooLarge(err) ? 413 : 400, headers: { "cache-control": "no-store" } },
+    );
+  }
 
   const title = String(form.get("title") ?? "").trim();
   const description = String(form.get("description") ?? "").trim();
@@ -38,10 +65,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if ((videoFile.type || "").toLowerCase() !== "video/mp4") {
-    // Keep strict for now.
+  if (!isMp4OrMovUpload(videoFile)) {
     return NextResponse.json(
-      { error: "Only MP4 videos are supported." },
+      { error: "Only MP4 or MOV videos are supported." },
       { status: 400, headers: { "cache-control": "no-store" } },
     );
   }
