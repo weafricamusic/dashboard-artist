@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 type ActionState = { ok: boolean; error?: string; songId?: string };
 
-type UploadSongFormProps = { artistName: string };
+type UploadSongFormProps = { artistName?: string };
 
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
 const MAX_AUDIO_SECONDS = 6 * 60;
@@ -96,8 +96,9 @@ function UploadProgress({ isSubmitting, hasSubmitted }: { isSubmitting: boolean;
   );
 }
 
-export function UploadSongForm({ artistName }: UploadSongFormProps) {
+export function UploadSongForm({ artistName: initialArtistName }: UploadSongFormProps) {
   const router = useRouter();
+  const artistName = (initialArtistName ?? "").trim();
   const [state, setState] = useState<ActionState>({ ok: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasSubmitted = isSubmitting || state.ok;
@@ -113,8 +114,8 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
   const coverInputId = "coverImage";
 
   const canSubmit = useMemo(() => {
-    return Boolean(audioFile) && !audioError && title.trim().length > 0 && genre.length > 0;
-  }, [audioFile, audioError, title, genre]);
+    return Boolean(audioFile) && !audioError && title.trim().length > 0 && genre.length > 0 && artistName.length > 0;
+  }, [audioFile, audioError, title, genre, artistName]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -135,6 +136,7 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
       );
       formData.set("description", description);
       formData.set("audioFile", audioFile);
+      if (coverFile) formData.set("coverImage", coverFile);
 
       const res = await fetch("/api/music/upload-song", {
         method: "POST",
@@ -245,7 +247,7 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
           <label
             htmlFor={audioInputId}
             className={
-              "flex w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-left transition " +
+              "relative flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-left transition " +
               (audioFile
                 ? "border-violet-500/60 bg-violet-500/10"
                 : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-700")
@@ -258,7 +260,7 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
               type="file"
               name="audioFile"
               accept="audio/mpeg,audio/mp3"
-              className="sr-only"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
               onChange={(event) => handleAudioSelect(event.target.files?.[0] ?? null)}
             />
           </label>
@@ -276,13 +278,12 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
                   <audio className="mt-2 w-full" src={audioPreviewUrl} controls preload="metadata" />
                 ) : null}
               </div>
-              <button
-                type="button"
-                onClick={() => document.getElementById(audioInputId)?.click()}
-                className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-zinc-600 hover:bg-zinc-900"
+              <label
+                htmlFor={audioInputId}
+                className="cursor-pointer rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-zinc-600 hover:bg-zinc-900"
               >
                 Change song
-              </button>
+              </label>
             </div>
           ) : null}
         </div>
@@ -333,7 +334,7 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
           <div className="text-sm font-medium text-zinc-200">Cover Image (optional)</div>
           <label
             htmlFor={coverInputId}
-            className="flex w-full items-center justify-between gap-3 rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 px-4 py-4 text-left text-sm text-zinc-400 hover:border-zinc-700"
+            className="relative flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 px-4 py-4 text-left text-sm text-zinc-400 hover:border-zinc-700"
           >
             <span>🖼️ Upload cover image</span>
             <span>JPG / PNG</span>
@@ -342,7 +343,7 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
               type="file"
               name="coverImage"
               accept="image/jpeg,image/png"
-              className="sr-only"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
               onChange={(event) => handleCoverSelect(event.target.files?.[0] ?? null)}
             />
           </label>
@@ -364,13 +365,12 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
                 <div className="truncate text-sm font-semibold text-white">{coverFile.name}</div>
                 <div className="mt-1 text-xs text-zinc-400">{formatBytes(coverFile.size)}</div>
               </div>
-              <button
-                type="button"
-                onClick={() => document.getElementById(coverInputId)?.click()}
-                className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-zinc-600 hover:bg-zinc-900"
+              <label
+                htmlFor={coverInputId}
+                className="cursor-pointer rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-zinc-600 hover:bg-zinc-900"
               >
                 Change cover
-              </button>
+              </label>
             </div>
           ) : null}
         </div>
