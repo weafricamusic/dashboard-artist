@@ -6,15 +6,17 @@ import {
   getConsumerAppConnectUrl,
 } from "../../../lib/urls";
 
+function wantsJson(request: NextRequest): boolean {
+  const accept = request.headers.get("accept") ?? "";
+  return accept.includes("application/json");
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
 
   const consumerConnectUrl = getConsumerAppConnectUrl();
   if (!consumerConnectUrl) {
-    const accept = request.headers.get("accept") ?? "";
-    const wantsJson = accept.includes("application/json");
-
-    if (wantsJson) {
+    if (wantsJson(request)) {
       return NextResponse.json(
         {
           error:
@@ -24,16 +26,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Browser UX fallback: if the consumer connect bridge isn't configured,
-    // send the user to the dashboard login page instead of showing a 500.
-    const redirectPath = safeRedirectPath(url.searchParams.get("redirect"));
-    const fallback = new URL("/artist/auth/login", url);
-    fallback.searchParams.set("redirect", redirectPath);
-    fallback.searchParams.set("error", "consumer_connect_not_configured");
+    const html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login Unavailable</title>
+  </head>
+  <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px;">
+    <h1 style="margin: 0 0 12px;">Login is handled in the consumer app</h1>
+    <p style="margin: 0 0 12px; line-height: 1.4;">
+      This dashboard is configured to use the consumer app for authentication.
+      The server is missing <code>CONSUMER_APP_CONNECT_URL</code>, so it can’t redirect you to the consumer login.
+    </p>
+    <p style="margin: 0; line-height: 1.4;">
+      Ask an admin to set <code>CONSUMER_APP_CONNECT_URL</code> in Vercel Environment Variables.
+    </p>
+  </body>
+</html>`;
 
-    const response = NextResponse.redirect(fallback);
-    response.headers.set("cache-control", "no-store");
-    return response;
+    return new NextResponse(html, {
+      status: 500,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "no-store",
+      },
+    });
   }
 
   const redirectPath = safeRedirectPath(url.searchParams.get("redirect"));
