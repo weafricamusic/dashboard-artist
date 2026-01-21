@@ -22,6 +22,32 @@ function isMp4OrMovFile(file: File): boolean {
   return byType || (byExt && (type === "" || type === "application/octet-stream"));
 }
 
+function isProbablyInAppBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = (navigator.userAgent || "").toLowerCase();
+  return (
+    ua.includes("instagram") ||
+    ua.includes("fbav") ||
+    ua.includes("fban") ||
+    ua.includes("twitter") ||
+    ua.includes("linkedinapp") ||
+    ua.includes("snapchat")
+  );
+}
+
+function tryOpenFilePicker(inputId: string) {
+  const el = document.getElementById(inputId);
+  if (!(el instanceof HTMLInputElement)) return;
+
+  const anyEl = el as unknown as { showPicker?: () => void };
+  if (typeof anyEl.showPicker === "function") {
+    anyEl.showPicker();
+    return;
+  }
+
+  el.click();
+}
+
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 MB";
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -103,6 +129,7 @@ function SubmitButton({ disabled, isSubmitting }: { disabled: boolean; isSubmitt
 
 export function UploadVideoForm() {
   const router = useRouter();
+  const inAppBrowser = useMemo(() => isProbablyInAppBrowser(), []);
   const [state, setState] = useState<ActionState>({ ok: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasSubmitted = isSubmitting || state.ok;
@@ -221,6 +248,19 @@ export function UploadVideoForm() {
       <div className="grid gap-5">
         <div className="space-y-2">
           <div className="text-sm font-semibold text-zinc-200">Video File</div>
+          {inAppBrowser ? (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+              File uploads may not work inside in-app browsers. Open this page in Chrome for reliable uploads.
+              <div className="mt-2">
+                <a
+                  href={`intent://${typeof window !== "undefined" ? window.location.host + window.location.pathname + window.location.search : "dashboard-artist.vercel.app"}#Intent;scheme=https;package=com.android.chrome;end`}
+                  className="inline-flex items-center justify-center rounded-lg bg-white px-3 py-2 text-xs font-semibold text-zinc-900"
+                >
+                  Open in Chrome
+                </a>
+              </div>
+            </div>
+          ) : null}
           <label
             htmlFor={inputId}
             className={
@@ -229,6 +269,16 @@ export function UploadVideoForm() {
                 ? "border-violet-500/60 bg-violet-500/10"
                 : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-700")
             }
+            onClick={(event) => {
+              if (!inAppBrowser) return;
+              event.preventDefault();
+              tryOpenFilePicker(inputId);
+            }}
+            onTouchEnd={(event) => {
+              if (!inAppBrowser) return;
+              event.preventDefault();
+              tryOpenFilePicker(inputId);
+            }}
           >
             <div className="text-base font-semibold text-white">📹 Tap to select video</div>
             <div className="text-sm text-zinc-400">MP4 only • Max 60 seconds • 720p max</div>

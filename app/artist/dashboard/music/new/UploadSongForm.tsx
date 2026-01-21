@@ -96,9 +96,37 @@ function UploadProgress({ isSubmitting, hasSubmitted }: { isSubmitting: boolean;
   );
 }
 
+function isProbablyInAppBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = (navigator.userAgent || "").toLowerCase();
+  return (
+    ua.includes("instagram") ||
+    ua.includes("fbav") ||
+    ua.includes("fban") ||
+    ua.includes("twitter") ||
+    ua.includes("linkedinapp") ||
+    ua.includes("snapchat")
+  );
+}
+
+function tryOpenFilePicker(inputId: string) {
+  const el = document.getElementById(inputId);
+  if (!(el instanceof HTMLInputElement)) return;
+
+  // Newer Chromium-based browsers expose showPicker().
+  const anyEl = el as unknown as { showPicker?: () => void };
+  if (typeof anyEl.showPicker === "function") {
+    anyEl.showPicker();
+    return;
+  }
+
+  el.click();
+}
+
 export function UploadSongForm({ artistName: initialArtistName }: UploadSongFormProps) {
   const router = useRouter();
   const artistName = (initialArtistName ?? "").trim();
+  const inAppBrowser = useMemo(() => isProbablyInAppBrowser(), []);
   const [state, setState] = useState<ActionState>({ ok: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasSubmitted = isSubmitting || state.ok;
@@ -244,6 +272,19 @@ export function UploadSongForm({ artistName: initialArtistName }: UploadSongForm
       <div className="grid gap-5">
         <div className="space-y-2">
           <div className="text-sm font-semibold text-zinc-200">Audio File</div>
+          {inAppBrowser ? (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+              File uploads may not work inside in-app browsers. Open this page in Chrome for reliable uploads.
+              <div className="mt-2">
+                <a
+                  href={`intent://${typeof window !== "undefined" ? window.location.host + window.location.pathname + window.location.search : "dashboard-artist.vercel.app"}#Intent;scheme=https;package=com.android.chrome;end`}
+                  className="inline-flex items-center justify-center rounded-lg bg-white px-3 py-2 text-xs font-semibold text-zinc-900"
+                >
+                  Open in Chrome
+                </a>
+              </div>
+            </div>
+          ) : null}
           <label
             htmlFor={audioInputId}
             className={
@@ -252,6 +293,16 @@ export function UploadSongForm({ artistName: initialArtistName }: UploadSongForm
                 ? "border-violet-500/60 bg-violet-500/10"
                 : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-700")
             }
+            onClick={(event) => {
+              if (!inAppBrowser) return;
+              event.preventDefault();
+              tryOpenFilePicker(audioInputId);
+            }}
+            onTouchEnd={(event) => {
+              if (!inAppBrowser) return;
+              event.preventDefault();
+              tryOpenFilePicker(audioInputId);
+            }}
           >
             <div className="text-base font-semibold text-white">🎵 Tap to select song</div>
             <div className="text-sm text-zinc-400">MP3 only • Max 20MB • Up to 6 minutes</div>
