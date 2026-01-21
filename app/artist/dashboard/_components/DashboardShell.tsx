@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { ArtistStatus } from "../../../../lib/auth/artist";
 
@@ -221,6 +221,10 @@ export function DashboardShell({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   const nav: NavItem[] = useMemo(
     () => [
       {
@@ -431,6 +435,7 @@ export function DashboardShell({
 
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar
+            key={pathname}
             displayName={displayName}
             status={status}
             verified={verified}

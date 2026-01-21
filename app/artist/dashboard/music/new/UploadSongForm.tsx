@@ -109,8 +109,8 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
-  const audioInputRef = useRef<HTMLInputElement | null>(null);
-  const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const audioInputId = "audioFile";
+  const coverInputId = "coverImage";
 
   const canSubmit = useMemo(() => {
     return Boolean(audioFile) && !audioError && title.trim().length > 0 && genre.length > 0;
@@ -242,9 +242,8 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
       <div className="grid gap-5">
         <div className="space-y-2">
           <div className="text-sm font-semibold text-zinc-200">Audio File</div>
-          <button
-            type="button"
-            onClick={() => audioInputRef.current?.click()}
+          <label
+            htmlFor={audioInputId}
             className={
               "flex w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-left transition " +
               (audioFile
@@ -254,15 +253,15 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
           >
             <div className="text-base font-semibold text-white">🎵 Tap to select song</div>
             <div className="text-sm text-zinc-400">MP3 only • Max 20MB • Up to 6 minutes</div>
-          </button>
-          <input
-            ref={audioInputRef}
-            type="file"
-            name="audioFile"
-            accept="audio/mpeg,audio/mp3"
-            className="sr-only"
-            onChange={(event) => handleAudioSelect(event.target.files?.[0] ?? null)}
-          />
+            <input
+              id={audioInputId}
+              type="file"
+              name="audioFile"
+              accept="audio/mpeg,audio/mp3"
+              className="sr-only"
+              onChange={(event) => handleAudioSelect(event.target.files?.[0] ?? null)}
+            />
+          </label>
 
           {audioError ? <div className="text-sm text-rose-300">{audioError}</div> : null}
 
@@ -279,7 +278,7 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
               </div>
               <button
                 type="button"
-                onClick={() => audioInputRef.current?.click()}
+                onClick={() => document.getElementById(audioInputId)?.click()}
                 className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-zinc-600 hover:bg-zinc-900"
               >
                 Change song
@@ -332,22 +331,21 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
 
         <div className="space-y-2">
           <div className="text-sm font-medium text-zinc-200">Cover Image (optional)</div>
-          <button
-            type="button"
-            onClick={() => coverInputRef.current?.click()}
+          <label
+            htmlFor={coverInputId}
             className="flex w-full items-center justify-between gap-3 rounded-xl border border-dashed border-zinc-800 bg-zinc-950/60 px-4 py-4 text-left text-sm text-zinc-400 hover:border-zinc-700"
           >
             <span>🖼️ Upload cover image</span>
             <span>JPG / PNG</span>
-          </button>
-          <input
-            ref={coverInputRef}
-            type="file"
-            name="coverImage"
-            accept="image/jpeg,image/png"
-            className="sr-only"
-            onChange={(event) => handleCoverSelect(event.target.files?.[0] ?? null)}
-          />
+            <input
+              id={coverInputId}
+              type="file"
+              name="coverImage"
+              accept="image/jpeg,image/png"
+              className="sr-only"
+              onChange={(event) => handleCoverSelect(event.target.files?.[0] ?? null)}
+            />
+          </label>
 
           {coverFile ? (
             <div className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
@@ -368,7 +366,7 @@ export function UploadSongForm({ artistName }: UploadSongFormProps) {
               </div>
               <button
                 type="button"
-                onClick={() => coverInputRef.current?.click()}
+                onClick={() => document.getElementById(coverInputId)?.click()}
                 className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-zinc-600 hover:bg-zinc-900"
               >
                 Change cover

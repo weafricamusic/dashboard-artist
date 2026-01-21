@@ -112,7 +112,7 @@ export function UploadVideoForm() {
   const [duration, setDuration] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputId = "videoFile";
 
   const canSubmit = useMemo(() => {
     return Boolean(file) && !error && title.trim().length > 0;
@@ -221,9 +221,8 @@ export function UploadVideoForm() {
       <div className="grid gap-5">
         <div className="space-y-2">
           <div className="text-sm font-semibold text-zinc-200">Video File</div>
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
+          <label
+            htmlFor={inputId}
             className={
               "flex w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-left transition " +
               (file
@@ -233,15 +232,15 @@ export function UploadVideoForm() {
           >
             <div className="text-base font-semibold text-white">📹 Tap to select video</div>
             <div className="text-sm text-zinc-400">MP4 only • Max 60 seconds • 720p max</div>
-          </button>
-          <input
-            ref={inputRef}
-            type="file"
-            name="videoFile"
-            accept="video/mp4,video/quicktime,.mp4,.mov"
-            className="sr-only"
-            onChange={(event) => handleSelect(event.target.files?.[0] ?? null)}
-          />
+            <input
+              id={inputId}
+              type="file"
+              name="videoFile"
+              accept="video/mp4,video/quicktime,.mp4,.mov"
+              className="sr-only"
+              onChange={(event) => handleSelect(event.target.files?.[0] ?? null)}
+            />
+          </label>
 
           {error ? <div className="text-sm text-rose-300">{error}</div> : null}
 
@@ -265,7 +264,7 @@ export function UploadVideoForm() {
               </div>
               <button
                 type="button"
-                onClick={() => inputRef.current?.click()}
+                onClick={() => document.getElementById(inputId)?.click()}
                 className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-zinc-600 hover:bg-zinc-900"
               >
                 Change video
