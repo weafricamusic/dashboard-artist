@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { requireArtistSession } from "../../../../lib/auth/artist";
 import { getSupabaseAdminClient } from "../../../../lib/supabase/admin";
+import { GoLiveSection } from "../_components/GoLiveSection";
 
 type Trend = {
   label: string;
@@ -384,6 +385,37 @@ export default async function ArtistOverviewPage({
         </div>
       </section>
 
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-white">Go Live Now</h2>
+          <p className="mt-1 text-sm text-zinc-400">Start broadcasting instantly and engage your audience in real-time.</p>
+        </div>
+        <div className="rounded-2xl border border-rose-900/20 bg-gradient-to-r from-rose-950/30 to-zinc-950 p-6 shadow-lg">
+          <div className="flex items-start justify-between gap-6">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Ready to go live?</h3>
+              <p className="mt-2 text-sm text-zinc-400">
+                Stream to your fans, invite other artists to collaborate, and engage your audience with camera and mic controls.
+              </p>
+              <ul className="mt-3 space-y-1 text-sm text-zinc-300">
+                <li className="flex items-center gap-2">
+                  <span className="text-emerald-400">✓</span> Camera & mic permissions
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-emerald-400">✓</span> Invite collaborators
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-emerald-400">✓</span> Real-time stats
+                </li>
+              </ul>
+            </div>
+            <div className="flex-shrink-0">
+              <GoLiveSection />
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="space-y-3">
         <div>
           <h2 className="text-sm font-semibold text-white">Quick actions</h2>
@@ -402,8 +434,8 @@ export default async function ArtistOverviewPage({
           />
           <ActionButton
             href="/artist/dashboard/live"
-            title="Start live stream"
-            description="Go live and engage your fans."
+            title="Live sessions"
+            description="Manage schedule and view history."
           />
           <ActionButton
             href="/artist/dashboard/analytics"
