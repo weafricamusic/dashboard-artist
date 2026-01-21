@@ -97,34 +97,50 @@ export async function createSong(
   const col = songsCol(artistUid);
   if (!col) throw new Error("Firebase Admin/Firestore not configured");
 
-  const maxSongs = getFeatureInt(subscription.features, "limits.maxSongs", 10);
-  if (maxSongs > 0) {
-    const snap = await col.limit(maxSongs + 1).get();
-    if (snap.size >= maxSongs) {
-      throw new Error(`You have reached your plan limit (${maxSongs}) for songs. Upgrade to upload more.`);
+  try {
+    const maxSongs = getFeatureInt(subscription.features, "limits.maxSongs", 10);
+    if (maxSongs > 0) {
+      const snap = await col.limit(maxSongs + 1).get();
+      if (snap.size >= maxSongs) {
+        throw new Error(`You have reached your plan limit (${maxSongs}) for songs. Upgrade to upload more.`);
+      }
     }
+
+    const createdAt = FieldValue.serverTimestamp();
+    const updatedAt = FieldValue.serverTimestamp();
+
+    const doc = await col.add({
+      title: input.title,
+      description: input.description ?? "",
+      genre: input.genre ?? "",
+      tags: input.tags ?? [],
+      releaseDate: input.releaseDate ?? "",
+      coverImageUrl: input.coverImageUrl ?? "",
+      status: input.status ?? "draft",
+      plays: 0,
+      likes: 0,
+      comments: 0,
+      shares: 0,
+      createdAt,
+      updatedAt,
+    });
+
+    return doc.id;
+  } catch (err) {
+    if (isFirestoreApiDisabledError(err)) {
+      warnFirestoreApiDisabledOnce(err);
+      throw new Error(
+        "Firestore is not enabled for this Firebase project. In Firebase Console → Firestore Database, create/enable a database, then retry.",
+      );
+    }
+    if (isFirestoreNotFoundError(err)) {
+      warnFirestoreNotFoundOnce(err);
+      throw new Error(
+        "Firestore database was not found for this Firebase project. In Firebase Console → Firestore Database, create the '(default)' database, then retry.",
+      );
+    }
+    throw err;
   }
-
-  const createdAt = FieldValue.serverTimestamp();
-  const updatedAt = FieldValue.serverTimestamp();
-
-  const doc = await col.add({
-    title: input.title,
-    description: input.description ?? "",
-    genre: input.genre ?? "",
-    tags: input.tags ?? [],
-    releaseDate: input.releaseDate ?? "",
-    coverImageUrl: input.coverImageUrl ?? "",
-    status: input.status ?? "draft",
-    plays: 0,
-    likes: 0,
-    comments: 0,
-    shares: 0,
-    createdAt,
-    updatedAt,
-  });
-
-  return doc.id;
 }
 
 export async function updateSong(

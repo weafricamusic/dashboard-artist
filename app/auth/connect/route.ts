@@ -11,13 +11,29 @@ export async function GET(request: NextRequest) {
 
   const consumerConnectUrl = getConsumerAppConnectUrl();
   if (!consumerConnectUrl) {
-    return NextResponse.json(
-      {
-        error:
-          "Consumer app connect URL is not configured. Set CONSUMER_APP_CONNECT_URL.",
-      },
-      { status: 500, headers: { "cache-control": "no-store" } },
-    );
+    const accept = request.headers.get("accept") ?? "";
+    const wantsJson = accept.includes("application/json");
+
+    if (wantsJson) {
+      return NextResponse.json(
+        {
+          error:
+            "Consumer app connect URL is not configured. Set CONSUMER_APP_CONNECT_URL.",
+        },
+        { status: 500, headers: { "cache-control": "no-store" } },
+      );
+    }
+
+    // Browser UX fallback: if the consumer connect bridge isn't configured,
+    // send the user to the dashboard login page instead of showing a 500.
+    const redirectPath = safeRedirectPath(url.searchParams.get("redirect"));
+    const fallback = new URL("/artist/auth/login", url);
+    fallback.searchParams.set("redirect", redirectPath);
+    fallback.searchParams.set("error", "consumer_connect_not_configured");
+
+    const response = NextResponse.redirect(fallback);
+    response.headers.set("cache-control", "no-store");
+    return response;
   }
 
   const redirectPath = safeRedirectPath(url.searchParams.get("redirect"));

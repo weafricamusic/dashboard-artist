@@ -1,0 +1,13 @@
+# Prevent shipping local secrets and dev artifacts to Vercel
+firebase-service-account.json
+.env*
+.logs/
+
+# Node / Next build artifacts
+node_modules/
+.next/
+out/
+
+# Misc
+.DS_Store
+.vscode/

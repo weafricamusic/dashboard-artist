@@ -6,7 +6,6 @@ import { requireArtistSession } from "../../../../../../lib/auth/artist";
 import { deleteVideo, getVideo, updateVideo } from "../../../../../../lib/content/videos";
 import { type ContentStatus } from "../../../../../../lib/content/types";
 import { StatusBadge } from "../../../music/_components/StatusBadge";
-import { WatermarkedDownloadButton } from "../../_components/WatermarkedDownloadButton";
 
 export default async function EditVideoPage({
   params,
@@ -38,15 +37,11 @@ export default async function EditVideoPage({
     if (!title) throw new Error("Title is required");
 
     const description = String(formData.get("description") ?? "").trim();
-    const videoUrl = String(formData.get("videoUrl") ?? "").trim();
-    const thumbnailUrl = String(formData.get("thumbnailUrl") ?? "").trim();
     const status = String(formData.get("status") ?? "draft") as ContentStatus;
 
     await updateVideo(session.user.uid, videoId, {
       title,
       description: description || "",
-      videoUrl: videoUrl || "",
-      thumbnailUrl: thumbnailUrl || "",
       status,
     });
 
@@ -106,26 +101,6 @@ export default async function EditVideoPage({
             />
           </label>
 
-          <label className="block md:col-span-2">
-            <div className="text-sm font-medium text-zinc-200">Video URL</div>
-            <input
-              name="videoUrl"
-              defaultValue={video.videoUrl ?? ""}
-              className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950/30 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-600"
-              placeholder="https://..."
-            />
-          </label>
-
-          <label className="block md:col-span-2">
-            <div className="text-sm font-medium text-zinc-200">Thumbnail URL</div>
-            <input
-              name="thumbnailUrl"
-              defaultValue={video.thumbnailUrl ?? ""}
-              className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950/30 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-600"
-              placeholder="https://..."
-            />
-          </label>
-
           <label className="block">
             <div className="text-sm font-medium text-zinc-200">Status</div>
             <select
@@ -157,45 +132,6 @@ export default async function EditVideoPage({
         </div>
       </form>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 shadow-sm">
-        <div className="text-sm font-medium text-white">Share / download</div>
-        <div className="mt-2 grid gap-3 md:grid-cols-3">
-          <a
-            href={video.videoUrl || "#"}
-            target="_blank"
-            rel="noreferrer"
-            className={`rounded-lg border px-3 py-2 text-sm hover:bg-zinc-900 ${
-              video.videoUrl
-                ? "border-zinc-800 text-zinc-200 hover:border-zinc-700"
-                : "border-zinc-900 text-zinc-600"
-            }`}
-          >
-            Open video
-          </a>
-
-          <WatermarkedDownloadButton
-            imageUrl={video.thumbnailUrl}
-            filename={`weafrica-${video.id}-thumbnail.png`}
-          />
-
-          <a
-            href={video.thumbnailUrl || "#"}
-            target="_blank"
-            rel="noreferrer"
-            className={`rounded-lg border px-3 py-2 text-sm hover:bg-zinc-900 ${
-              video.thumbnailUrl
-                ? "border-zinc-800 text-zinc-200 hover:border-zinc-700"
-                : "border-zinc-900 text-zinc-600"
-            }`}
-          >
-            Open thumbnail
-          </a>
-        </div>
-        <div className="mt-2 text-xs text-zinc-500">
-          Full video watermarking typically requires a media pipeline (e.g. ffmpeg). For now we
-          support watermarking the thumbnail.
-        </div>
-      </div>
     </div>
   );
 }

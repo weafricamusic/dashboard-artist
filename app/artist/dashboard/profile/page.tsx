@@ -137,7 +137,7 @@ export default async function ArtistProfilePage({
               name="stageName"
               defaultValue={profile?.stageName ?? ""}
               className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
-              placeholder="DJ Steve"
+              placeholder="Stage name"
             />
           </label>
 

@@ -14,7 +14,7 @@ Configure both apps to use the same cookie name + domain:
 Flow:
 
 1. The consumer app authenticates the user and **sets the shared session cookie** on `.weafrica.com`.
-2. The DJ dashboard reads the cookie via `getUserFromSessionCookie()` and routes accordingly.
+2. The artist dashboard reads the cookie via `getUserFromSessionCookie()` and routes accordingly.
 
 In this repo, the session cookie is assumed to be a **Firebase Session Cookie** and is verified server-side using Firebase Admin.
 
@@ -103,6 +103,27 @@ Firebase Web SDK env vars (for the login page):
 
 ## Getting Started
 
+## Deploying to Vercel
+
+1. Push this repo to GitHub (or ensure the remote is up to date).
+2. In Vercel: **New Project** → import the repo.
+3. Build settings:
+	- Framework preset: **Next.js**
+	- Build command: `npm run build`
+	- Output directory: `.next`
+4. Add Environment Variables (Vercel → Project → Settings → Environment Variables):
+	- Required for auth (server-side): `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
+	  - Alternative: `FIREBASE_SERVICE_ACCOUNT_JSON` (instead of the split fields)
+	- Required for login page: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`
+	- Optional: `AUTH_SESSION_COOKIE_NAME`, `AUTH_COOKIE_DOMAIN`, `AUTH_COOKIE_SAMESITE`, `AUTH_SESSION_MAX_AGE_SECONDS`
+	- Optional (Supabase-backed dashboards): `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`
+5. Deploy.
+
+Notes:
+
+- Do not upload `firebase-service-account.json` to Vercel. Use env vars (recommended: `FIREBASE_SERVICE_ACCOUNT_JSON`) instead.
+- Large media should use signed uploads (`POST /api/uploads/init` → PUT directly to Storage). The one-call ingest endpoint (`POST /api/uploads/ingest`) is limited by Vercel request body caps.
+
 ## Environment Variables
 
 This repo expects a local env file.
@@ -151,6 +172,28 @@ The Live page can schedule sessions and show upcoming/history via Supabase.
 
 - Create the table by running [supabase/migrations/20260114_0002_create_live_sessions.sql](supabase/migrations/20260114_0002_create_live_sessions.sql) in the Supabase SQL editor.
 - Ensure the dashboard has `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` set in `.env.local`.
+
+## Upload processing pipeline (Supabase + FFmpeg)
+
+The artist dashboard expects a background worker to compress uploads for streaming.
+
+- Create the table by running [supabase/migrations/20260120_0010_create_uploads.sql](supabase/migrations/20260120_0010_create_uploads.sql) in the Supabase SQL editor.
+- Configure these env vars in `.env.local` or your worker environment:
+	- `NEXT_PUBLIC_SUPABASE_URL`
+	- `SUPABASE_SERVICE_ROLE_KEY`
+	- `SUPABASE_STORAGE_BUCKET` (defaults to `media`)
+- Create the Storage bucket (Supabase → Storage → Buckets) or run:
+	- `npm run create-storage-bucket`
+- Store original uploads under:
+	- `original/songs/` and `original/videos/`
+- The worker outputs processed files to:
+	- `processed/songs/` and `processed/videos/`
+
+Run the worker with:
+
+```
+node scripts/process-uploads.js
+```
 
 ## Live battles (Supabase)
 

@@ -2,10 +2,15 @@
   "name": "dashboard-artist",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "node scripts/next.mjs dev",
     "build": "node scripts/next.mjs build",
     "start": "node scripts/next.mjs start",
+    "create-storage-bucket": "node scripts/create-storage-bucket.mjs",
+    "process-uploads": "node scripts/process-uploads.js",
     "lint": "eslint"
   },
   "dependencies": {

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthCookieName } from "./lib/auth/config";
-import { getOptionalEnv } from "./lib/env";
+import { getConsumerAppConnectUrl } from "./lib/urls";
 
 export const config = {
   matcher: ["/artist/dashboard/:path*"],
@@ -16,7 +16,12 @@ export function middleware(request: NextRequest) {
 
   // If the consumer app connect URL is configured, prefer the SSO bridge.
   // This avoids re-auth when the user is already signed in in the consumer app.
-  const hasConsumerConnect = Boolean(getOptionalEnv("CONSUMER_APP_CONNECT_URL"));
+  let hasConsumerConnect = false;
+  try {
+    hasConsumerConnect = Boolean(getConsumerAppConnectUrl());
+  } catch {
+    hasConsumerConnect = false;
+  }
 
   const destination = request.nextUrl.clone();
   destination.pathname = hasConsumerConnect ? "/auth/connect" : "/artist/auth/login";

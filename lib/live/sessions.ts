@@ -221,9 +221,18 @@ export async function updateLiveSessionStatusForArtist(
     return { ok: false, reason: "invalid", message: "Invalid status." };
   }
 
+  const patch: Record<string, string> = {
+    status,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (status === "ended") {
+    patch.ends_at = new Date().toISOString();
+  }
+
   const res = await supabase
     .from("live_sessions")
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(patch)
     .eq("id", id)
     .eq("artist_uid", artistUid)
     .select("id")
@@ -235,6 +244,58 @@ export async function updateLiveSessionStatusForArtist(
 
   if (!res.data) return { ok: false, reason: "not_found", message: "Session not found." };
   return { ok: true };
+}
+
+export async function createLiveNowForArtist(
+  artistUid: string,
+  input: {
+    title: string;
+    notes?: string;
+  },
+): Promise<
+  | { ok: true; id: string }
+  | { ok: false; reason: "not_configured" | "table_missing" | "invalid" | "unknown"; message: string }
+> {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) {
+    return {
+      ok: false,
+      reason: "not_configured",
+      message: "Supabase is not configured (missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY).",
+    };
+  }
+
+  const title = input.title.trim();
+  if (!title) {
+    return { ok: false, reason: "invalid", message: "Title is required." };
+  }
+
+  const payload = {
+    artist_uid: artistUid,
+    status: "live" satisfies LiveSessionStatus,
+    title,
+    starts_at: new Date().toISOString(),
+    event_url: null,
+    notes: input.notes?.trim() || null,
+  };
+
+  const res = await supabase.from("live_sessions").insert(payload).select("id").single();
+
+  if (res.error) {
+    const msg = res.error.message ?? "Failed to start live session";
+    if (isMissingTableError(msg)) {
+      return {
+        ok: false,
+        reason: "table_missing",
+        message: "Supabase table live_sessions is missing. Create it to enable live streaming.",
+      };
+    }
+    return { ok: false, reason: "unknown", message: msg };
+  }
+
+  const rec = asRecord(res.data);
+  const id = rec ? readString(rec.id) : null;
+  return { ok: true, id: id ?? "" };
 }
 
 export async function createLiveSessionForArtist(

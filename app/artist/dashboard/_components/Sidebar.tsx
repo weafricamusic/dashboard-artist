@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const nav = [
   { href: "/artist/dashboard/overview", label: "Overview" },
+  { href: "/artist/dashboard/uploads", label: "My Uploads" },
   { href: "/artist/dashboard/profile", label: "Profile" },
   { href: "/artist/dashboard/music", label: "Songs" },
   { href: "/artist/dashboard/playlists", label: "Albums / Playlists" },

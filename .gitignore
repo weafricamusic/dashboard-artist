@@ -45,6 +45,10 @@ firebase-service-account.json
 # vercel
 .vercel
 
+# supabase CLI
+.supabase/
+supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -11,11 +11,13 @@ import {
   type BattleCategory,
 } from "../../../../lib/battles/artist";
 import {
+  createLiveNowForArtist,
   createLiveSessionForArtist,
   listLiveSessionsForArtist,
   updateLiveSessionStatusForArtist,
   type LiveSessionStatus,
 } from "../../../../lib/live/sessions";
+import LiveStreamingDashboard from "../../../../components/LiveStreamingDashboard";
 
 function formatInt(value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";
@@ -79,6 +81,48 @@ export default async function ArtistLivePage({
 
     revalidatePath("/artist/dashboard/live");
     redirect("/artist/dashboard/live?live_scheduled=1");
+  }
+
+  async function startLiveNow(formData: FormData) {
+    "use server";
+
+    const session = await requireArtistSession();
+
+    const title = String(formData.get("title") ?? "").trim();
+    const notes = String(formData.get("notes") ?? "").trim();
+
+    const res = await createLiveNowForArtist(session.user.uid, {
+      title,
+      notes: notes || undefined,
+    });
+
+    if (!res.ok) {
+      const msg = encodeURIComponent(res.message);
+      redirect(`/artist/dashboard/live?live_error=${msg}`);
+    }
+
+    revalidatePath("/artist/dashboard/live");
+    redirect("/artist/dashboard/live");
+  }
+
+  async function endLiveNow(formData: FormData) {
+    "use server";
+
+    const session = await requireArtistSession();
+
+    const sessionId = String(formData.get("sessionId") ?? "").trim();
+    if (!sessionId) {
+      redirect("/artist/dashboard/live?live_error=Missing%20session%20id");
+    }
+
+    const res = await updateLiveSessionStatusForArtist(session.user.uid, { sessionId, status: "ended" });
+    if (!res.ok) {
+      const msg = encodeURIComponent(res.message);
+      redirect(`/artist/dashboard/live?live_error=${msg}`);
+    }
+
+    revalidatePath("/artist/dashboard/live");
+    redirect("/artist/dashboard/live");
   }
 
   async function createBattle(formData: FormData) {
@@ -156,6 +200,7 @@ export default async function ArtistLivePage({
   // (We redirect with these query params from the server action.)
   const liveError = typeof sp.live_error === "string" ? sp.live_error : null;
   const liveScheduled = typeof sp.live_scheduled === "string" ? sp.live_scheduled : null;
+  const currentLive = upcoming.sessions.find((s) => s.status === "live") ?? null;
 
   return (
     <div className="space-y-6">
@@ -299,6 +344,81 @@ export default async function ArtistLivePage({
 
       {tab === "scheduled" ? (
         <>
+
+      <LiveStreamingDashboard userId={session.user.uid} />
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 shadow-sm">
+          <div className="text-sm font-medium text-white">Start Live Stream</div>
+          <div className="mt-2 text-sm text-zinc-400">
+            Go live instantly with a title and optional description.
+          </div>
+
+          {currentLive ? (
+            <div className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4">
+              <div className="text-sm font-semibold text-rose-200">🔴 Live now</div>
+              <div className="mt-1 text-base font-semibold text-white">{currentLive.title}</div>
+              <div className="mt-1 text-xs text-zinc-400">
+                Started {new Date(currentLive.startsAt).toLocaleString()}
+              </div>
+              <form action={endLiveNow} className="mt-3">
+                <input type="hidden" name="sessionId" value={currentLive.id} />
+                <button className="rounded-lg border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-zinc-700 hover:bg-zinc-900">
+                  End Stream
+                </button>
+              </form>
+            </div>
+          ) : (
+            <form action={startLiveNow} className="mt-4 space-y-4">
+              <label className="block">
+                <div className="text-sm font-medium text-zinc-200">Title</div>
+                <input
+                  name="title"
+                  className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950/30 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-600"
+                  placeholder="Live set"
+                  required
+                />
+              </label>
+
+              <label className="block">
+                <div className="text-sm font-medium text-zinc-200">Description (optional)</div>
+                <textarea
+                  name="notes"
+                  rows={3}
+                  className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950/30 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-600"
+                />
+              </label>
+
+              <div className="flex items-center justify-end">
+                <button className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-500">
+                  Start Live
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 shadow-sm">
+          <div className="text-sm font-medium text-white">Live Status</div>
+          <div className="mt-2 text-sm text-zinc-400">Real-time viewers and donations will appear here.</div>
+          <div className="mt-4 space-y-2 text-sm text-zinc-300">
+            <div className="flex items-center justify-between">
+              <span>Viewers</span>
+              <span>—</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Status</span>
+              <span className={currentLive ? "text-rose-200" : "text-zinc-400"}>
+                {currentLive ? "Live" : "Offline"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Donations (coins)</span>
+              <span>{formatInt(live.coins)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-4">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 shadow-sm">
