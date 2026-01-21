@@ -24,6 +24,12 @@ export function getAuthCookieDomainForHost(hostHeader: string | null): string | 
 
   const domain = getDomain(host);
   if (!domain) return undefined;
+
+  // Platform domains are typically on the Public Suffix List (or otherwise disallow
+  // setting cookies for the parent domain). Use a host-only cookie instead.
+  // This is especially important for `*.vercel.app` deployments.
+  if (domain === "vercel.app") return undefined;
+
   return `.${domain}`;
 }
 
