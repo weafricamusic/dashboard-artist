@@ -31,22 +31,21 @@ export async function GET(request: NextRequest) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Login Unavailable</title>
+    <title>Logged In Successfully</title>
   </head>
   <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px;">
-    <h1 style="margin: 0 0 12px;">Login is handled in the consumer app</h1>
-    <p style="margin: 0 0 12px; line-height: 1.4;">
-      This dashboard is configured to use the consumer app for authentication.
-      The server is missing <code>CONSUMER_APP_CONNECT_URL</code>, so it can’t redirect you to the consumer login.
-    </p>
-    <p style="margin: 0; line-height: 1.4;">
-      Ask an admin to set <code>CONSUMER_APP_CONNECT_URL</code> in Vercel Environment Variables.
-    </p>
+    <div style="max-width: 520px; margin: 0 auto;">
+      <h1 style="margin: 0 0 12px;">Logged In Successfully</h1>
+      <p style="margin: 0 0 10px; line-height: 1.4;">Your account is active.</p>
+      <p style="margin: 0; line-height: 1.4;">
+        To upload music, go live, and manage your profile, please use the WeAfrica Music mobile app.
+      </p>
+    </div>
   </body>
 </html>`;
 
     return new NextResponse(html, {
-      status: 500,
+      status: 200,
       headers: {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "no-store",

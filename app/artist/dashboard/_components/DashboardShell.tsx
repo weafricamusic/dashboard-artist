@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { ArtistStatus } from "../../../../lib/auth/artist";
 
@@ -219,11 +219,10 @@ export function DashboardShell({
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+  // Track which pathname opened the mobile nav.
+  // When the route changes, `mobileOpen` becomes false automatically.
+  const [mobileOpenPath, setMobileOpenPath] = useState<string | null>(null);
+  const mobileOpen = mobileOpenPath === pathname;
 
   const nav: NavItem[] = useMemo(
     () => [
@@ -390,7 +389,7 @@ export function DashboardShell({
           <div className="fixed inset-0 z-40 md:hidden">
             <div
               className="absolute inset-0 bg-black/60"
-              onClick={() => setMobileOpen(false)}
+              onClick={() => setMobileOpenPath(null)}
               aria-hidden="true"
             />
             <aside className="absolute left-0 top-0 h-full w-80 border-r border-zinc-800 bg-zinc-950 px-3 py-4 shadow-2xl">
@@ -398,7 +397,7 @@ export function DashboardShell({
                 <div className="text-sm font-semibold tracking-wide text-white">WeAfrica</div>
                 <button
                   type="button"
-                  onClick={() => setMobileOpen(false)}
+                  onClick={() => setMobileOpenPath(null)}
                   className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950/40 text-zinc-200 hover:border-zinc-700 hover:bg-zinc-900"
                   aria-label="Close navigation"
                 >
@@ -413,7 +412,7 @@ export function DashboardShell({
                     <Link
                       key={item.href}
                       href={item.href}
-                      onClick={() => setMobileOpen(false)}
+                      onClick={() => setMobileOpenPath(null)}
                       className={
                         "group flex items-center gap-3 rounded-2xl px-2 py-2 transition " +
                         (active ? "bg-zinc-900/60" : "hover:bg-zinc-900/40")
@@ -442,7 +441,7 @@ export function DashboardShell({
             avatarUrl={avatarUrl}
             canUploadSongs={canUploadSongs}
             canUploadVideos={canUploadVideos}
-            onToggleMobile={() => setMobileOpen(true)}
+            onToggleMobile={() => setMobileOpenPath(pathname)}
           />
 
           <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6">
