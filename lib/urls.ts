@@ -14,7 +14,14 @@ function normalizeUrl(raw: string, envName: string): string {
 
 export function getArtistDashboardBaseUrl(): string | undefined {
   const value = getOptionalEnv("ARTIST_DASHBOARD_URL");
-  return value ? normalizeUrl(value, "ARTIST_DASHBOARD_URL") : undefined;
+  if (value) return normalizeUrl(value, "ARTIST_DASHBOARD_URL");
+
+  // On Vercel, `VERCEL_URL` is available and points at the current deployment.
+  // This is especially useful for Preview deployments where the hostname changes.
+  const vercelUrl = process.env.VERCEL_URL;
+  if (vercelUrl) return normalizeUrl(`https://${vercelUrl}`, "VERCEL_URL");
+
+  return undefined;
 }
 
 export function getConsumerAppConnectUrl(): string | undefined {
