@@ -43,11 +43,11 @@ export async function getArtistSession(): Promise<ArtistSession | null> {
 
 export async function requireArtistSession(): Promise<ArtistSession> {
   const session = await getArtistSession();
-  if (!session) redirect("/artist/auth/login");
+  if (!session) redirect("/");
 
   // If role claims are configured, enforce them. If not, allow access but rely on
   // status banners/UI + backend authorization for sensitive actions.
-  if (session.role && session.role !== "artist") redirect("/artist/auth/login");
+  if (session.role && session.role !== "artist") redirect("/");
 
   return session;
 }

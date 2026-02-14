@@ -264,21 +264,11 @@ export function UploadVideoForm() {
           <label
             htmlFor={inputId}
             className={
-              "flex w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-left transition " +
+              "relative flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-8 text-left transition " +
               (file
                 ? "border-violet-500/60 bg-violet-500/10"
                 : "border-zinc-800 bg-zinc-950/60 hover:border-zinc-700")
             }
-            onClick={(event) => {
-              if (!inAppBrowser) return;
-              event.preventDefault();
-              tryOpenFilePicker(inputId);
-            }}
-            onTouchEnd={(event) => {
-              if (!inAppBrowser) return;
-              event.preventDefault();
-              tryOpenFilePicker(inputId);
-            }}
           >
             <div className="text-base font-semibold text-white">📹 Tap to select video</div>
             <div className="text-sm text-zinc-400">MP4 only • Max 60 seconds • 720p max</div>
@@ -287,7 +277,7 @@ export function UploadVideoForm() {
               type="file"
               name="videoFile"
               accept="video/mp4,video/quicktime,.mp4,.mov"
-              className="sr-only"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
               onChange={(event) => handleSelect(event.target.files?.[0] ?? null)}
             />
           </label>
@@ -312,13 +302,12 @@ export function UploadVideoForm() {
                   {formatDuration(duration)} • {formatBytes(file.size)}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => document.getElementById(inputId)?.click()}
-                className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-zinc-600 hover:bg-zinc-900"
+              <label
+                htmlFor={inputId}
+                className="cursor-pointer rounded-lg border border-zinc-700 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:border-zinc-600 hover:bg-zinc-900"
               >
                 Change video
-              </button>
+              </label>
             </div>
           ) : null}
         </div>

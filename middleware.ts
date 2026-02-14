@@ -14,9 +14,10 @@ export function middleware(request: NextRequest) {
   const redirectTarget = `${request.nextUrl.pathname}${request.nextUrl.search}`;
 
   const destination = request.nextUrl.clone();
-  destination.pathname = "/auth/connect";
+  // Login happens in the consumer app. Keep the dashboard web unauth flow on
+  // the public homepage instead of showing /auth/connect.
+  destination.pathname = "/";
   destination.searchParams.set("redirect", redirectTarget);
-  destination.searchParams.set("mode", "login");
 
   return NextResponse.redirect(destination);
 }

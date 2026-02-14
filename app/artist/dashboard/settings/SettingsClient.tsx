@@ -174,7 +174,7 @@ export default function SettingsClient({
     const ok = window.confirm("Are you sure you want to log out?");
     if (!ok) return;
     await fetch("/auth/logout", { method: "POST" });
-    router.replace("/artist/auth/login");
+    router.replace("/");
     router.refresh();
   }
 

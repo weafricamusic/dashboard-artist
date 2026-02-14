@@ -31,14 +31,19 @@ export async function GET(request: NextRequest) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Logged In Successfully</title>
+    <title>Login via Mobile App</title>
   </head>
   <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px;">
     <div style="max-width: 520px; margin: 0 auto;">
-      <h1 style="margin: 0 0 12px;">Logged In Successfully</h1>
-      <p style="margin: 0 0 10px; line-height: 1.4;">Your account is active.</p>
+      <h1 style="margin: 0 0 12px;">Login via Mobile App</h1>
+      <p style="margin: 0 0 10px; line-height: 1.4;">
+        This dashboard does not support web login.
+      </p>
       <p style="margin: 0; line-height: 1.4;">
-        To upload music, go live, and manage your profile, please use the WeAfrica Music mobile app.
+        To continue, sign in in the WeAfrica Music mobile app, then return here.
+      </p>
+      <p style="margin: 12px 0 0; line-height: 1.4; color: #52525b;">
+        Admin note: set <code>CONSUMER_APP_CONNECT_URL</code> to enable deep-linking into the app.
       </p>
     </div>
   </body>
