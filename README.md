@@ -56,7 +56,8 @@ If you want **everyone to login/sign up in the Flutter consumer app**, use the d
 
 - Dashboard URL: `GET /auth/connect?mode=login&redirect=/artist/dashboard/overview`
 - Env vars:
-	- `ARTIST_DASHBOARD_URL` (the deployed base URL of this dashboard)
+	- `WEAFRICA_ARTIST_DASHBOARD_URL` (preferred; the deployed base URL of this dashboard)
+	- `ARTIST_DASHBOARD_URL` (backward-compatible alias)
 	- `CONSUMER_APP_CONNECT_URL` (the consumer app URL/deeplink that initiates login)
 
 The dashboard will redirect the browser to `CONSUMER_APP_CONNECT_URL` and include a query param:

@@ -13,6 +13,13 @@ function normalizeUrl(raw: string, envName: string): string {
 }
 
 export function getArtistDashboardBaseUrl(): string | undefined {
+  const weafricaValue = getOptionalEnv("WEAFRICA_ARTIST_DASHBOARD_URL");
+  if (weafricaValue)
+    return normalizeUrl(
+      weafricaValue,
+      "WEAFRICA_ARTIST_DASHBOARD_URL",
+    );
+
   const value = getOptionalEnv("ARTIST_DASHBOARD_URL");
   if (value) return normalizeUrl(value, "ARTIST_DASHBOARD_URL");
 

@@ -16,9 +16,11 @@ export async function GET(request: NextRequest) {
   const token = url.searchParams.get("token");
   let redirect = safeRedirectPath(url.searchParams.get("redirect"));
 
-  // Ensure artists land on the Overview page after logging in via the consumer app.
-  // Keep explicit deep-links working, but normalize the dashboard root to Overview.
-  if (redirect === "/artist/dashboard") {
+  // Ensure artists land on the dashboard after logging in via the consumer app.
+  // Keep explicit dashboard deep-links working, but block non-dashboard redirects.
+  if (!redirect.startsWith("/artist/dashboard")) {
+    redirect = "/artist/dashboard/overview";
+  } else if (redirect === "/artist/dashboard") {
     redirect = "/artist/dashboard/overview";
   }
 
