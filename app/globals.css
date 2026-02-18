@@ -12,8 +12,9 @@
 }
 
 .theme-light {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Keep a single theme everywhere (dark). */
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 @theme inline {

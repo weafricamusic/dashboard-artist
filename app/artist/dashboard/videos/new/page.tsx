@@ -24,7 +24,7 @@ export default async function NewVideoPage() {
           <div className="mt-4 flex items-center gap-3">
             <a
               href="/artist/dashboard/subscription"
-              className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-100"
+              className="rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white hover:bg-violet-500"
             >
               View plans
             </a>

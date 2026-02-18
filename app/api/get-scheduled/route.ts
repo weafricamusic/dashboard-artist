@@ -1,16 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseAdminClient } from "../../../lib/supabase/admin";
+import { requireVerifiedArtistFromRequest } from "../../../lib/auth/request";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = String(searchParams.get("userId") ?? "").trim();
-    const role = "artist";
-
-    if (!userId) {
-      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    const verified = await requireVerifiedArtistFromRequest(request);
+    if (!verified.ok) {
+      return NextResponse.json({ error: verified.error }, { status: verified.status });
     }
+
+    const userId = verified.artist.uid;
+    const role = "artist";
 
     const supabase = getSupabaseAdminClient();
     if (!supabase) {
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
 
     const { data, error } = await supabase
       .from("live_sessions")
-      .select("id,title,starts_at,status")
+      .select("public_code,title,starts_at,status")
       .eq("artist_uid", userId)
       .eq("status", "scheduled")
       .order("starts_at", { ascending: true });
@@ -29,10 +30,13 @@ export async function GET(request: Request) {
     }
 
     const streams = (data ?? []).map((row) => ({
-      id: row.id,
-      title: row.title,
-      start_time: row.starts_at,
-      status: row.status,
+      id: (() => {
+        const rec = row as unknown as Record<string, unknown>;
+        return typeof rec.public_code === "string" ? rec.public_code : "";
+      })(),
+      title: (row as unknown as Record<string, unknown>).title as string,
+      start_time: (row as unknown as Record<string, unknown>).starts_at as string,
+      status: (row as unknown as Record<string, unknown>).status as string,
       role,
     }));
 

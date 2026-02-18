@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { getPublicLiveSessionById } from "../../../lib/live/sessions";
+import { getPublicLiveSessionByCode } from "../../../lib/live/sessions";
 
 export const runtime = "nodejs";
 
@@ -37,7 +37,7 @@ export default async function PublicLiveWatchPage({
 }) {
   const { sessionId } = await params;
 
-  const res = await getPublicLiveSessionById(sessionId);
+  const res = await getPublicLiveSessionByCode(sessionId);
   if (!res.session) notFound();
 
   const s = res.session;

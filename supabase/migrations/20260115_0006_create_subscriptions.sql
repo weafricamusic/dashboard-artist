@@ -25,6 +25,55 @@ create table if not exists public.subscriptions (
   constraint subscriptions_code_unique unique (code)
 );
 
+-- If the table already existed from an earlier iteration, it may be missing newer columns.
+-- `create table if not exists` does not backfill schema changes, so we ensure required columns exist.
+alter table if exists public.subscriptions
+  add column if not exists code text;
+
+alter table if exists public.subscriptions
+  add column if not exists name text;
+
+alter table if exists public.subscriptions
+  add column if not exists features jsonb not null default '{}'::jsonb;
+
+alter table if exists public.subscriptions
+  add column if not exists sort_order int not null default 0;
+
+alter table if exists public.subscriptions
+  add column if not exists created_at timestamptz not null default now();
+
+alter table if exists public.subscriptions
+  add column if not exists updated_at timestamptz not null default now();
+
+-- Best-effort backfill for older schemas that used different column names.
+-- This block is safe to re-run.
+do $$
+begin
+  -- If an older schema used plan_code, copy it into code where missing.
+  begin
+    execute 'update public.subscriptions set code = plan_code where code is null';
+  exception when undefined_column then
+    null;
+  end;
+
+  -- If an older schema used plan_name, copy it into name where missing.
+  begin
+    execute 'update public.subscriptions set name = plan_name where name is null';
+  exception when undefined_column then
+    null;
+  end;
+
+  -- If code is still missing but name exists, infer code from name.
+  update public.subscriptions
+  set code = case
+    when lower(name) like '%platinum%' then 'platinum'
+    when lower(name) like '%premium%' then 'premium'
+    when lower(name) like '%free%' then 'free'
+    else code
+  end
+  where code is null and name is not null;
+end $$;
+
 create index if not exists subscriptions_sort_order_idx
   on public.subscriptions (sort_order asc, created_at desc);
 
@@ -53,19 +102,92 @@ create table if not exists public.user_subscriptions (
   constraint user_subscriptions_status_check check (status in ('active','cancelled','expired'))
 );
 
-create index if not exists user_subscriptions_artist_uid_created_at_idx
-  on public.user_subscriptions (artist_uid, created_at desc);
+-- If the table already existed from an earlier iteration, it may be missing newer columns.
+-- Ensure required columns exist before creating indexes.
+alter table if exists public.user_subscriptions
+  add column if not exists artist_uid text;
 
-create index if not exists user_subscriptions_artist_uid_status_idx
-  on public.user_subscriptions (artist_uid, status);
+alter table if exists public.user_subscriptions
+  add column if not exists subscription_id uuid;
 
-create index if not exists user_subscriptions_expires_at_idx
-  on public.user_subscriptions (expires_at desc nulls last);
+alter table if exists public.user_subscriptions
+  add column if not exists status text not null default 'active';
 
--- Only allow one current record per artist (best-effort). If you need history,
--- remove this constraint and keep using newest created_at in queries.
-create unique index if not exists user_subscriptions_one_row_per_artist_idx
-  on public.user_subscriptions (artist_uid);
+alter table if exists public.user_subscriptions
+  add column if not exists expires_at timestamptz null;
+
+alter table if exists public.user_subscriptions
+  add column if not exists provider text null;
+
+alter table if exists public.user_subscriptions
+  add column if not exists provider_subscription_id text null;
+
+alter table if exists public.user_subscriptions
+  add column if not exists created_at timestamptz not null default now();
+
+alter table if exists public.user_subscriptions
+  add column if not exists updated_at timestamptz not null default now();
+
+-- Best-effort backfill for older schemas that used different column names.
+-- This block is safe to re-run.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'user_subscriptions'
+      and column_name = 'artist_uid'
+  ) then
+    -- If an older schema used artist_id, copy it into artist_uid where missing.
+    if exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'user_subscriptions'
+        and column_name = 'artist_id'
+    ) then
+      execute 'update public.user_subscriptions set artist_uid = artist_id where artist_uid is null';
+    end if;
+
+    -- If an older schema used user_id, copy it into artist_uid where missing.
+    if exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'user_subscriptions'
+        and column_name = 'user_id'
+    ) then
+      execute 'update public.user_subscriptions set artist_uid = user_id where artist_uid is null';
+    end if;
+  end if;
+end $$;
+
+-- Only create indexes that reference columns that exist (legacy schemas may be missing them).
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'user_subscriptions'
+      and column_name = 'artist_uid'
+  ) then
+    execute 'create index if not exists user_subscriptions_artist_uid_created_at_idx on public.user_subscriptions (artist_uid, created_at desc)';
+    execute 'create index if not exists user_subscriptions_artist_uid_status_idx on public.user_subscriptions (artist_uid, status)';
+    execute 'create unique index if not exists user_subscriptions_one_row_per_artist_idx on public.user_subscriptions (artist_uid)';
+  end if;
+
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'user_subscriptions'
+      and column_name = 'expires_at'
+  ) then
+    execute 'create index if not exists user_subscriptions_expires_at_idx on public.user_subscriptions (expires_at desc nulls last)';
+  end if;
+end $$;
 
 alter table public.subscriptions enable row level security;
 alter table public.user_subscriptions enable row level security;

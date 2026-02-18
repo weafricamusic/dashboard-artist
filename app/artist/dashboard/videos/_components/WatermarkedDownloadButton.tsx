@@ -62,7 +62,7 @@ export function WatermarkedDownloadButton({
     return (
       <button
         type="button"
-        className="rounded-lg border border-zinc-200 px-2 py-1 text-xs text-zinc-400"
+        className="rounded-lg border border-zinc-800 bg-zinc-950/40 px-2 py-1 text-xs text-zinc-500"
         disabled
       >
         Download watermark
@@ -74,7 +74,7 @@ export function WatermarkedDownloadButton({
     <div className="flex flex-col items-start gap-1">
       <button
         type="button"
-        className="rounded-lg border border-zinc-200 px-2 py-1 text-xs hover:bg-zinc-50"
+        className="rounded-lg border border-zinc-800 bg-zinc-950/40 px-2 py-1 text-xs text-zinc-200 hover:border-zinc-700 hover:bg-zinc-900"
         onClick={async () => {
           setError(null);
           setLoading(true);
@@ -90,7 +90,7 @@ export function WatermarkedDownloadButton({
       >
         {loading ? "Preparing…" : "Download watermark"}
       </button>
-      {error ? <div className="text-xs text-red-700">{error}</div> : null}
+      {error ? <div className="text-xs text-rose-300">{error}</div> : null}
     </div>
   );
 }

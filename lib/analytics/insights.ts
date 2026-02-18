@@ -267,19 +267,34 @@ export async function getSubscriberStatsForArtist(
 ): Promise<{
   newSubscribers7d: number | null;
   newSubscribers30d: number | null;
+  previousSubscribers7d: number | null;
+  growthRate7d: number | null;
+  totalActiveSubscribers: number | null;
   source: "supabase" | "none";
 }> {
   const supabase = getSupabaseAdminClient();
-  if (!supabase) return { newSubscribers7d: null, newSubscribers30d: null, source: "none" };
+  if (!supabase) {
+    return {
+      newSubscribers7d: null,
+      newSubscribers30d: null,
+      previousSubscribers7d: null,
+      growthRate7d: null,
+      totalActiveSubscribers: null,
+      source: "none",
+    };
+  }
 
-  const [rows7d, rows30d] = await Promise.all([
+  const since7d = daysBackIso(7);
+  const since14d = daysBackIso(14);
+
+  const [rows7d, rows30d, rowsPrev7d, rowsAll] = await Promise.all([
     supabase
       .from("transactions")
       .select("actor_id")
       .eq("target_type", "artist")
       .eq("target_id", artistUid)
       .eq("type", "subscription")
-      .gte("created_at", daysBackIso(7))
+      .gte("created_at", since7d)
       .limit(MAX_ROWS),
     supabase
       .from("transactions")
@@ -289,14 +304,39 @@ export async function getSubscriberStatsForArtist(
       .eq("type", "subscription")
       .gte("created_at", daysBackIso(30))
       .limit(MAX_ROWS),
+    supabase
+      .from("transactions")
+      .select("actor_id,created_at")
+      .eq("target_type", "artist")
+      .eq("target_id", artistUid)
+      .eq("type", "subscription")
+      .gte("created_at", since14d)
+      .lt("created_at", since7d)
+      .limit(MAX_ROWS),
+    supabase
+      .from("transactions")
+      .select("actor_id")
+      .eq("target_type", "artist")
+      .eq("target_id", artistUid)
+      .eq("type", "subscription")
+      .limit(MAX_ROWS),
   ]);
 
-  if (rows7d.error || rows30d.error) {
-    return { newSubscribers7d: null, newSubscribers30d: null, source: "none" };
+  if (rows7d.error || rows30d.error || rowsPrev7d.error || rowsAll.error) {
+    return {
+      newSubscribers7d: null,
+      newSubscribers30d: null,
+      previousSubscribers7d: null,
+      growthRate7d: null,
+      totalActiveSubscribers: null,
+      source: "none",
+    };
   }
 
   const rows7dRecords = (rows7d.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
   const rows30dRecords = (rows30d.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
+  const rowsPrev7dRecords = (rowsPrev7d.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
+  const rowsAllRecords = (rowsAll.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
 
   const distinct7d = new Set(
     rows7dRecords
@@ -310,9 +350,27 @@ export async function getSubscriberStatsForArtist(
       .filter((v): v is string => typeof v === "string" && v.length > 0),
   );
 
+  const distinctPrev7d = new Set(
+    rowsPrev7dRecords
+      .map((r) => r.actor_id)
+      .filter((v): v is string => typeof v === "string" && v.length > 0),
+  );
+
+  const distinctAll = new Set(
+    rowsAllRecords
+      .map((r) => r.actor_id)
+      .filter((v): v is string => typeof v === "string" && v.length > 0),
+  );
+
+  const previousSubscribers7d = distinctPrev7d.size;
+  const growthRate7d = previousSubscribers7d > 0 ? (distinct7d.size - previousSubscribers7d) / previousSubscribers7d : null;
+
   return {
     newSubscribers7d: distinct7d.size,
     newSubscribers30d: distinct30d.size,
+    previousSubscribers7d,
+    growthRate7d,
+    totalActiveSubscribers: distinctAll.size,
     source: "supabase",
   };
 }
@@ -358,45 +416,79 @@ export async function getLiveDonationsForArtist(
 
 export async function getTopSupportersForArtist(
   artistUid: string,
-  days = 30,
+  days: number | null = 30,
 ): Promise<{ supporters: TopSupporter[]; truncated: boolean; source: "supabase" | "none" }> {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return { supporters: [], truncated: false, source: "none" };
 
-  const since = daysBackIso(days);
+  const since = typeof days === "number" && Number.isFinite(days) && days > 0 ? daysBackIso(days) : null;
 
-  const rows = await supabase
-    .from("transactions")
-    .select("actor_id,coins,created_at,type")
-    .eq("target_type", "artist")
-    .eq("target_id", artistUid)
-    .gte("created_at", since)
+  const aggregate = (rows: UnknownRecord[], fanKey: string) => {
+    const map = new Map<string, { coins: number; lastSeenAt: string | null }>();
+
+    for (const r of rows) {
+      const fanId = readString(r[fanKey]);
+      if (!fanId) continue;
+
+      const existing = map.get(fanId) ?? { coins: 0, lastSeenAt: null };
+      const createdAt = readString(r.created_at);
+
+      map.set(fanId, {
+        coins: existing.coins + readNumber(r.coins),
+        lastSeenAt: existing.lastSeenAt ?? createdAt,
+      });
+    }
+
+    return Array.from(map.entries())
+      .map(([fanId, v]) => ({ fanId, coins: v.coins, lastSeenAt: v.lastSeenAt }))
+      .sort((a, b) => b.coins - a.coins)
+      .slice(0, 10);
+  };
+
+  // Preferred schema for dedicated supporter tracking.
+  let supporterQuery = supabase
+    .from("support_transactions")
+    .select("fan_id,coins,created_at")
+    .eq("artist_id", artistUid)
     .order("created_at", { ascending: false })
     .limit(MAX_ROWS);
 
-  if (rows.error) return { supporters: [], truncated: false, source: "none" };
-
-  const map = new Map<string, { coins: number; lastSeenAt: string | null }>();
-  const rowRecords = (rows.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
-
-  for (const r of rowRecords) {
-    const actorId = readString(r.actor_id);
-    if (typeof actorId !== "string" || actorId.length === 0) continue;
-
-    const existing = map.get(actorId) ?? { coins: 0, lastSeenAt: null };
-    const add = readNumber(r.coins);
-    const createdAt = readString(r.created_at);
-
-    map.set(actorId, {
-      coins: existing.coins + add,
-      lastSeenAt: existing.lastSeenAt ?? createdAt,
-    });
+  if (since) {
+    supporterQuery = supporterQuery.gte("created_at", since);
   }
 
-  const supporters = Array.from(map.entries())
-    .map(([fanId, v]) => ({ fanId, coins: v.coins, lastSeenAt: v.lastSeenAt }))
-    .sort((a, b) => b.coins - a.coins)
-    .slice(0, 10);
+  const supporterRows = await supporterQuery;
+
+  if (!supporterRows.error) {
+    const rowRecords = (supporterRows.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
+
+    return {
+      supporters: aggregate(rowRecords, "fan_id"),
+      truncated: (supporterRows.data?.length ?? 0) >= MAX_ROWS,
+      source: "supabase",
+    };
+  }
+
+  // Fallback schema: infer supporters from transactions.
+  let txQuery = supabase
+    .from("transactions")
+    .select("actor_id,coins,created_at")
+    .eq("target_type", "artist")
+    .eq("target_id", artistUid)
+    .order("created_at", { ascending: false })
+    .limit(MAX_ROWS);
+
+  if (since) {
+    txQuery = txQuery.gte("created_at", since);
+  }
+
+  const rows = await txQuery;
+
+  if (rows.error) return { supporters: [], truncated: false, source: "none" };
+
+  const rowRecords = (rows.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
+
+  const supporters = aggregate(rowRecords, "actor_id");
 
   return {
     supporters,
@@ -464,6 +556,122 @@ export async function getGeoBreakdownForArtist(
   }
 
   return { countries: [], cities: [], source: "none" };
+}
+
+export type AudienceHighlight = {
+  fanId: string;
+  count: number;
+};
+
+export type AudienceInsights = {
+  topCommenter: AudienceHighlight | null;
+  topLiker: AudienceHighlight | null;
+  mostLoyalListener: AudienceHighlight | null;
+  truncated: boolean;
+  source: "supabase" | "none";
+};
+
+function normalizeAudienceEvent(raw: unknown): "comment" | "like" | "stream" | null {
+  if (typeof raw !== "string") return null;
+  const v = raw.toLowerCase();
+  if (v.includes("comment")) return "comment";
+  if (v.includes("like")) return "like";
+  if (v.includes("play") || v.includes("stream") || v.includes("watch") || v.includes("view")) return "stream";
+  return null;
+}
+
+function topFromCounts(map: Map<string, number>): AudienceHighlight | null {
+  let winner: AudienceHighlight | null = null;
+  for (const [fanId, count] of map.entries()) {
+    if (!winner || count > winner.count) {
+      winner = { fanId, count };
+    }
+  }
+  return winner;
+}
+
+export async function getAudienceInsightsForArtist(
+  artistUid: string,
+  days = 30,
+): Promise<AudienceInsights> {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) {
+    return {
+      topCommenter: null,
+      topLiker: null,
+      mostLoyalListener: null,
+      truncated: false,
+      source: "none",
+    };
+  }
+
+  const since = daysBackIso(days);
+  const eventTypeCols = ["event_type", "event_name", "type"];
+  const fanCols = ["fan_id", "user_id", "actor_id"];
+  const artistFilters: Array<Array<{ col: string; value: string }>> = [
+    [{ col: "artist_id", value: artistUid }],
+    [
+      { col: "actor_type", value: "artist" },
+      { col: "actor_id", value: artistUid },
+    ],
+    [
+      { col: "target_type", value: "artist" },
+      { col: "target_id", value: artistUid },
+    ],
+  ];
+
+  for (const eventTypeCol of eventTypeCols) {
+    for (const fanCol of fanCols) {
+      for (const filters of artistFilters) {
+        let q = supabase
+          .from("analytics_events")
+          .select(`${eventTypeCol},${fanCol},created_at`)
+          .gte("created_at", since)
+          .limit(MAX_ROWS);
+
+        for (const f of filters) {
+          q = q.eq(f.col, f.value);
+        }
+
+        const res = await q;
+        if (res.error) continue;
+
+        const comments = new Map<string, number>();
+        const likes = new Map<string, number>();
+        const streams = new Map<string, number>();
+
+        for (const row of (res.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null)) {
+          const fanId = readString(row[fanCol]);
+          if (!fanId) continue;
+
+          const normalized = normalizeAudienceEvent(row[eventTypeCol]);
+          if (normalized === "comment") {
+            comments.set(fanId, (comments.get(fanId) ?? 0) + 1);
+          } else if (normalized === "like") {
+            likes.set(fanId, (likes.get(fanId) ?? 0) + 1);
+          } else if (normalized === "stream") {
+            streams.set(fanId, (streams.get(fanId) ?? 0) + 1);
+          }
+        }
+
+        return {
+          topCommenter: topFromCounts(comments),
+          topLiker: topFromCounts(likes),
+          mostLoyalListener: topFromCounts(streams),
+          truncated: (res.data?.length ?? 0) >= MAX_ROWS,
+          source: "supabase",
+        };
+      }
+    }
+  }
+
+  return {
+    topCommenter: null,
+    topLiker: null,
+    mostLoyalListener: null,
+    truncated: false,
+    source: "none",
+  };
 }
 
 export type ContentEventStats = {
@@ -607,4 +815,22 @@ export async function getPerContentStatsForArtist(
   }
 
   return { songs: {}, videos: {}, truncated: false, source: "none", usedColumns: null };
+}
+
+export async function getLiveViewsAllTimeForArtist(
+  artistUid: string,
+): Promise<{ total: number | null; source: "supabase" | "none" }> {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) return { total: null, source: "none" };
+
+  const res = await supabase
+    .from("analytics_events")
+    .select("id", { count: "exact", head: true })
+    .in("event_name", ["live_view", "live_watch", "live_join"])
+    .eq("actor_type", "artist")
+    .eq("actor_id", artistUid);
+
+  if (res.error) return { total: null, source: "none" };
+
+  return { total: res.count ?? 0, source: "supabase" };
 }

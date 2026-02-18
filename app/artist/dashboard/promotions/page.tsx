@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireArtistSession } from "../../../../lib/auth/artist";
+import { getArtistSubscriptionStatus } from "../../../../lib/subscriptions/artist";
 import {
   createPromotionCampaignForArtist,
   getPromotionLimits,
@@ -28,11 +29,20 @@ function computeRoi(spendCoins: number, revenueCoins: number): string {
   return `${pct.toFixed(0)}%`;
 }
 
+function formatCountriesCapacity(maxCountries: number): string {
+  return maxCountries <= 1 ? "1" : `Up to ${maxCountries}`;
+}
+
+function formatCampaignsCapacity(maxCampaigns: number): string {
+  return maxCampaigns <= 1 ? "1" : `Up to ${maxCampaigns}`;
+}
+
 export default async function ArtistPromotionsPage({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const session = await requireArtistSession();
 
   async function createPromotion(formData: FormData) {
@@ -73,13 +83,20 @@ export default async function ArtistPromotionsPage({
     redirect("/artist/dashboard/promotions?promo_created=1");
   }
 
-  const [limitsRes, campaignsRes] = await Promise.all([
+  const [limitsRes, campaignsRes, subscription] = await Promise.all([
     getPromotionLimits(),
     listPromotionCampaignsForArtist(session.user.uid, 25),
+    getArtistSubscriptionStatus(session.user.uid),
   ]);
 
-  const promoError = typeof searchParams?.promo_error === "string" ? searchParams.promo_error : null;
-  const promoCreated = typeof searchParams?.promo_created === "string" ? searchParams.promo_created : null;
+  const promoError =
+    typeof resolvedSearchParams?.promo_error === "string"
+      ? resolvedSearchParams.promo_error
+      : null;
+  const promoCreated =
+    typeof resolvedSearchParams?.promo_created === "string"
+      ? resolvedSearchParams.promo_created
+      : null;
 
   const limits = limitsRes.limits;
   const configured = campaignsRes.source === "supabase";
@@ -121,9 +138,21 @@ export default async function ArtistPromotionsPage({
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-sm font-medium text-white">Create boost</div>
-            <div className="mt-1 text-sm text-zinc-400">Admin-controlled limits apply. Track reach and ROI.</div>
-            <div className="mt-2 text-xs text-zinc-500">
-              Limits: {limits.minBudgetCoins}–{limits.maxBudgetCoins} coins · up to {limits.maxCountries} countries · up to {limits.maxActiveCampaigns} active/pending campaigns
+            <div className="mt-1 text-sm text-zinc-400">Boost limits are automatically applied based on your plan.</div>
+            <div className="mt-3 text-sm text-zinc-300">
+              Current Plan: <span className="font-semibold text-white">{subscription.planName}</span>
+            </div>
+            <a href="/artist/dashboard/subscription" className="mt-1 inline-block text-sm font-medium text-violet-300 hover:text-violet-200">
+              Upgrade to increase campaign limits →
+            </a>
+
+            <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
+              <div className="text-sm font-medium text-white">Campaign Limits (Based on Your Plan)</div>
+              <div className="mt-2 space-y-1 text-xs text-zinc-300">
+                <div>• Budget: {formatInt(limits.minBudgetCoins)}–{formatInt(limits.maxBudgetCoins)} coins</div>
+                <div>• Target countries: {formatCountriesCapacity(limits.maxCountries)}</div>
+                <div>• Active campaigns: {formatCampaignsCapacity(limits.maxActiveCampaigns)}</div>
+              </div>
             </div>
           </div>
         </div>

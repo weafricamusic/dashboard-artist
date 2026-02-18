@@ -46,14 +46,35 @@ function readNumber(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+const THREAD_TABLE_CANDIDATES = ["artist_inbox_threads", "inbox_threads"] as const;
+const MESSAGE_TABLE_CANDIDATES = ["artist_inbox_messages", "inbox_messages"] as const;
+
 function isMissingTableError(message: string): boolean {
   const m = message.toLowerCase();
+
+  if (m.includes("column") && m.includes("does not exist")) return false;
+
+  const hasThreadMissing = THREAD_TABLE_CANDIDATES.some(
+    (table) =>
+      m.includes(`relation \"${table}\" does not exist`) ||
+      m.includes(`relation \"public.${table}\" does not exist`) ||
+      (m.includes("relation") && m.includes(table) && m.includes("does not exist")) ||
+      (m.includes("could not find") && m.includes("schema cache") && m.includes(`public.${table}`)),
+  );
+
+  const hasMessageMissing = MESSAGE_TABLE_CANDIDATES.some(
+    (table) =>
+      m.includes(`relation \"${table}\" does not exist`) ||
+      m.includes(`relation \"public.${table}\" does not exist`) ||
+      (m.includes("relation") && m.includes(table) && m.includes("does not exist")) ||
+      (m.includes("could not find") && m.includes("schema cache") && m.includes(`public.${table}`)),
+  );
+
   return (
-    m.includes("does not exist") ||
-    m.includes("could not find") ||
-    m.includes("unknown table") ||
-    (m.includes("relation") && m.includes("artist_inbox_threads")) ||
-    (m.includes("relation") && m.includes("artist_inbox_messages"))
+    hasThreadMissing ||
+    hasMessageMissing ||
+    ((m.includes("unknown table") || m.includes("table") || m.includes("does not exist")) &&
+      (m.includes("artist_inbox") || m.includes("inbox_threads") || m.includes("inbox_messages")))
   );
 }
 
@@ -77,29 +98,41 @@ export async function listInboxThreadsForArtist(
   const supabase = getSupabaseAdminClient();
   if (!supabase) return { threads: [], source: "none" };
 
-  const res = await supabase
-    .from("artist_inbox_threads")
-    .select(
-      "id,artist_uid,thread_type,fan_id,subject,last_message_preview,last_message_at,last_sender_type,unread_count,created_at,updated_at",
-    )
-    .eq("artist_uid", artistUid)
-    .order("last_message_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  let rows: UnknownRecord[] | null = null;
+  let nonMissingError: string | null = null;
 
-  if (res.error) {
-    const msg = res.error.message ?? "Failed to load inbox";
-    if (isMissingTableError(msg)) {
-      return {
-        threads: [],
-        source: "none",
-        error: "Messages are not configured in Supabase yet (missing artist_inbox tables).",
-      };
+  for (const table of THREAD_TABLE_CANDIDATES) {
+    const res = await supabase
+      .from(table)
+      .select(
+        "id,artist_uid,thread_type,fan_id,subject,last_message_preview,last_message_at,last_sender_type,unread_count,created_at,updated_at",
+      )
+      .eq("artist_uid", artistUid)
+      .order("last_message_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (res.error) {
+      const msg = res.error.message ?? "Failed to load inbox";
+      if (isMissingTableError(msg)) {
+        continue;
+      }
+      nonMissingError = msg;
+      break;
     }
-    return { threads: [], source: "none", error: msg };
+
+    rows = (res.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
+    break;
   }
 
-  const rows = (res.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
+  if (nonMissingError) {
+    return { threads: [], source: "none", error: nonMissingError };
+  }
+
+  if (!rows) {
+    return { threads: [], source: "none" };
+  }
+
   const threads: InboxThread[] = rows.map((row) => ({
     id: readString(row.id) ?? "",
     artistUid: readString(row.artist_uid) ?? artistUid,
@@ -125,27 +158,39 @@ export async function listInboxMessagesForThread(
   const supabase = getSupabaseAdminClient();
   if (!supabase) return { messages: [], source: "none" };
 
-  const res = await supabase
-    .from("artist_inbox_messages")
-    .select("id,thread_id,artist_uid,sender_type,sender_id,body,created_at,read_at")
-    .eq("artist_uid", artistUid)
-    .eq("thread_id", threadId)
-    .order("created_at", { ascending: true })
-    .limit(limit);
+  let rows: UnknownRecord[] | null = null;
+  let nonMissingError: string | null = null;
 
-  if (res.error) {
-    const msg = res.error.message ?? "Failed to load messages";
-    if (isMissingTableError(msg)) {
-      return {
-        messages: [],
-        source: "none",
-        error: "Messages are not configured in Supabase yet (missing artist_inbox tables).",
-      };
+  for (const table of MESSAGE_TABLE_CANDIDATES) {
+    const res = await supabase
+      .from(table)
+      .select("id,thread_id,artist_uid,sender_type,sender_id,body,created_at,read_at")
+      .eq("artist_uid", artistUid)
+      .eq("thread_id", threadId)
+      .order("created_at", { ascending: true })
+      .limit(limit);
+
+    if (res.error) {
+      const msg = res.error.message ?? "Failed to load messages";
+      if (isMissingTableError(msg)) {
+        continue;
+      }
+      nonMissingError = msg;
+      break;
     }
-    return { messages: [], source: "none", error: msg };
+
+    rows = (res.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
+    break;
   }
 
-  const rows = (res.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
+  if (nonMissingError) {
+    return { messages: [], source: "none", error: nonMissingError };
+  }
+
+  if (!rows) {
+    return { messages: [], source: "none" };
+  }
+
   const messages: InboxMessage[] = rows.map((row) => ({
     id: readString(row.id) ?? "",
     threadId: readString(row.thread_id) ?? threadId,
@@ -189,37 +234,65 @@ export async function sendArtistReply(
   }
 
   // Insert message (author: artist)
-  const insertRes = await supabase.from("artist_inbox_messages").insert({
-    thread_id: threadId,
-    artist_uid: artistUid,
-    sender_type: "artist" satisfies InboxSenderType,
-    sender_id: artistUid,
-    body: trimmed,
-  });
+  let inserted = false;
+  let insertError: string | null = null;
 
-  if (insertRes.error) {
-    const msg = insertRes.error.message ?? "Failed to send message";
-    if (isMissingTableError(msg)) {
-      return {
-        ok: false,
-        reason: "table_missing",
-        message: "Supabase tables for Messages are missing. Run the inbox migration to enable Messages.",
-      };
+  for (const table of MESSAGE_TABLE_CANDIDATES) {
+    const insertRes = await supabase.from(table).insert({
+      thread_id: threadId,
+      artist_uid: artistUid,
+      sender_type: "artist" satisfies InboxSenderType,
+      sender_id: artistUid,
+      body: trimmed,
+    });
+
+    if (insertRes.error) {
+      const msg = insertRes.error.message ?? "Failed to send message";
+      if (isMissingTableError(msg)) {
+        continue;
+      }
+      insertError = msg;
+      break;
     }
-    return { ok: false, reason: "unknown", message: msg };
+
+    inserted = true;
+    break;
+  }
+
+  if (!inserted) {
+    if (insertError) {
+      return { ok: false, reason: "unknown", message: insertError };
+    }
+    return {
+      ok: false,
+      reason: "table_missing",
+      message: "Supabase tables for Messages are missing. Run the inbox migration to enable Messages.",
+    };
   }
 
   // Best-effort: update thread summary fields.
-  await supabase
-    .from("artist_inbox_threads")
-    .update({
-      last_message_preview: trimPreview(trimmed),
-      last_message_at: new Date().toISOString(),
-      last_sender_type: "artist" satisfies InboxSenderType,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("artist_uid", artistUid)
-    .eq("id", threadId);
+  for (const table of THREAD_TABLE_CANDIDATES) {
+    const threadRes = await supabase
+      .from(table)
+      .update({
+        last_message_preview: trimPreview(trimmed),
+        last_message_at: new Date().toISOString(),
+        last_sender_type: "artist" satisfies InboxSenderType,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("artist_uid", artistUid)
+      .eq("id", threadId);
+
+    if (!threadRes.error) {
+      break;
+    }
+
+    if (isMissingTableError(threadRes.error.message ?? "")) {
+      continue;
+    }
+
+    break;
+  }
 
   return { ok: true };
 }
@@ -239,31 +312,57 @@ export async function markInboxThreadRead(
 
   const now = new Date().toISOString();
 
-  const updateRes = await supabase
-    .from("artist_inbox_messages")
-    .update({ read_at: now })
-    .eq("artist_uid", artistUid)
-    .eq("thread_id", threadId)
-    .is("read_at", null)
-    .neq("sender_type", "artist");
+  let marked = false;
+  let markError: string | null = null;
 
-  if (updateRes.error) {
-    const msg = updateRes.error.message ?? "Failed to mark read";
-    if (isMissingTableError(msg)) {
-      return {
-        ok: false,
-        reason: "table_missing",
-        message: "Supabase tables for Messages are missing. Run the inbox migration to enable Messages.",
-      };
+  for (const table of MESSAGE_TABLE_CANDIDATES) {
+    const updateRes = await supabase
+      .from(table)
+      .update({ read_at: now })
+      .eq("artist_uid", artistUid)
+      .eq("thread_id", threadId)
+      .is("read_at", null)
+      .neq("sender_type", "artist");
+
+    if (updateRes.error) {
+      const msg = updateRes.error.message ?? "Failed to mark read";
+      if (isMissingTableError(msg)) {
+        continue;
+      }
+      markError = msg;
+      break;
     }
-    return { ok: false, reason: "unknown", message: msg };
+
+    marked = true;
+    break;
   }
 
-  await supabase
-    .from("artist_inbox_threads")
-    .update({ unread_count: 0, updated_at: now })
-    .eq("artist_uid", artistUid)
-    .eq("id", threadId);
+  if (!marked) {
+    if (markError) return { ok: false, reason: "unknown", message: markError };
+    return {
+      ok: false,
+      reason: "table_missing",
+      message: "Supabase tables for Messages are missing. Run the inbox migration to enable Messages.",
+    };
+  }
+
+  for (const table of THREAD_TABLE_CANDIDATES) {
+    const threadRes = await supabase
+      .from(table)
+      .update({ unread_count: 0, updated_at: now })
+      .eq("artist_uid", artistUid)
+      .eq("id", threadId);
+
+    if (!threadRes.error) {
+      break;
+    }
+
+    if (isMissingTableError(threadRes.error.message ?? "")) {
+      continue;
+    }
+
+    break;
+  }
 
   return { ok: true };
 }

@@ -46,7 +46,7 @@ export function PieChart({
       viewBox={`0 0 ${size} ${size}`}
       role="img"
       aria-label="Pie chart"
-      className="text-zinc-900"
+      className="text-zinc-200"
     >
       {total <= 0 ? (
         <circle cx={cx} cy={cy} r={r} fill="rgba(24,24,27,0.08)" />
@@ -68,7 +68,7 @@ export function PieChart({
             );
           })
       )}
-      <circle cx={cx} cy={cy} r={r * 0.58} fill="white" stroke="rgba(24,24,27,0.08)" />
+      <circle cx={cx} cy={cy} r={r * 0.58} fill="transparent" stroke="rgba(24,24,27,0.08)" />
     </svg>
   );
 }

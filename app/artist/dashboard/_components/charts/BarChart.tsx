@@ -26,7 +26,7 @@ export function BarChart({
       height={height}
       role="img"
       aria-label="Bar chart"
-      className="text-zinc-900/70"
+      className="text-zinc-200/70"
     >
       <rect x={0} y={0} width={width} height={height} fill="transparent" />
       {data.map((d, i) => {

@@ -12,8 +12,7 @@ export default function LiveStreamingDashboard({ userId }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!userId) return;
-    fetch(`/api/get-scheduled?userId=${encodeURIComponent(userId)}`)
+    fetch(`/api/get-scheduled`)
       .then((res) => res.json())
       .then((data) => setScheduledStreams(Array.isArray(data.streams) ? data.streams : []))
       .catch(() => setScheduledStreams([]));
@@ -30,7 +29,7 @@ export default function LiveStreamingDashboard({ userId }) {
     const res = await fetch("/api/start-live", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description, userId }),
+      body: JSON.stringify({ title, description }),
     });
 
     const data = await res.json();

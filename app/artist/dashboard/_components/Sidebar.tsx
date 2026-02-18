@@ -20,14 +20,14 @@ const nav = [
 
 export function Sidebar() {
   return (
-    <aside className="hidden w-64 flex-none border-r border-zinc-200 bg-white p-4 md:block">
-      <div className="text-sm font-semibold">WeAfrica Artist</div>
+    <aside className="hidden w-64 flex-none border-r border-zinc-800 bg-zinc-950/40 p-4 md:block">
+      <div className="text-sm font-semibold text-white">WeAfrica Artist</div>
       <nav className="mt-4 flex flex-col gap-1">
         {nav.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+            className="rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-900 hover:text-white"
           >
             {item.label}
           </Link>

@@ -13,6 +13,13 @@ if (nextArgs.length === 0) {
   process.exit(1);
 }
 
+const command = nextArgs[0];
+const hasBundlerFlag = nextArgs.includes("--turbo") || nextArgs.includes("--turbopack") || nextArgs.includes("--webpack");
+const shouldForceWebpack = (command === "dev" || command === "build") && !hasBundlerFlag;
+if (shouldForceWebpack) {
+  nextArgs.push("--webpack");
+}
+
 const nextBin = path.join(projectRoot, "node_modules", "next", "dist", "bin", "next");
 const child = spawn(process.execPath, [nextBin, ...nextArgs], {
   stdio: "inherit",

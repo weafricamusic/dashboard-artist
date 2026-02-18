@@ -9,5 +9,5 @@ export default function ArtistLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="min-h-screen bg-zinc-50 text-zinc-900">{children}</div>;
+  return <div className="min-h-screen bg-zinc-950 text-zinc-100">{children}</div>;
 }

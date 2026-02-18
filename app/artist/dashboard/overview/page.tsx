@@ -30,6 +30,18 @@ function formatInt(value: number | null | undefined): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
 }
 
+function formatPct(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  if (!Number.isFinite(value)) return "—";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(0)}%`;
+}
+
+function formatMwk(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
+}
+
 export default async function ArtistOverviewPage({
   searchParams,
 }: {
@@ -58,6 +70,8 @@ export default async function ArtistOverviewPage({
   const mwkRateRaw = process.env.COIN_TO_MWK_RATE;
   const mwkRateNum = mwkRateRaw ? Number(mwkRateRaw) : null;
   const mwkRate = Number.isFinite(mwkRateNum) && (mwkRateNum ?? 0) > 0 ? (mwkRateNum as number) : null;
+  const totalCoins = earningsData?.totalCoins ?? null;
+  const totalMwk = mwkRate && totalCoins !== null ? totalCoins * mwkRate : null;
 
   return (
     <div className="space-y-8">
@@ -74,6 +88,7 @@ export default async function ArtistOverviewPage({
 
         <div className="flex flex-shrink-0 items-center gap-4">
           {session.user.picture ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={session.user.picture}
               alt="Profile"
@@ -117,6 +132,56 @@ export default async function ArtistOverviewPage({
             value={formatInt(engagement?.comments30d)}
             subtext="Last 30 days"
             icon={<IconMessage className="w-5 h-5" />}
+          />
+        </DashboardGrid>
+      </section>
+
+      {/* Performance (Read-Only) */}
+      <section className="space-y-4">
+        <SectionHeader
+          title="Performance"
+          description="Read-only totals calculated from your songs, videos, and analytics."
+        />
+        <DashboardGrid columns="4col">
+          <MetricDisplay
+            label="Total Songs"
+            value={formatInt(contentData?.totalSongs)}
+            subtext="All-time"
+            icon={<IconMusic className="w-5 h-5" />}
+          />
+          <MetricDisplay
+            label="Total Videos"
+            value={formatInt(contentData?.totalVideos)}
+            subtext="All-time"
+            icon={<IconPlay className="w-5 h-5" />}
+          />
+          <MetricDisplay
+            label="Total Plays"
+            value={formatInt(contentData?.totalPlays)}
+            subtext={
+              contentData?.liveViewsAllTime === null || contentData?.liveViewsAllTime === undefined
+                ? "Songs + videos"
+                : "Songs + videos + live"
+            }
+            icon={<IconPlay className="w-5 h-5" />}
+          />
+          <MetricDisplay
+            label="Total Likes"
+            value={formatInt(contentData?.totalLikes)}
+            subtext="Songs + videos"
+            icon={<IconHeart className="w-5 h-5" />}
+          />
+          <MetricDisplay
+            label="Total Earnings"
+            value={formatInt(totalCoins)}
+            subtext={totalMwk !== null ? `≈ MWK ${formatMwk(totalMwk)}` : "Coins"}
+            icon={<IconCoin className="w-5 h-5" />}
+          />
+          <MetricDisplay
+            label="Monthly Growth %"
+            value={formatPct(engagement?.monthlyGrowthPct)}
+            subtext="Last 30d vs previous 30d"
+            icon={<IconTrendingUp className="w-5 h-5" />}
           />
         </DashboardGrid>
       </section>

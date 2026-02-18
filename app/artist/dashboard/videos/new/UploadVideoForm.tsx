@@ -35,19 +35,6 @@ function isProbablyInAppBrowser(): boolean {
   );
 }
 
-function tryOpenFilePicker(inputId: string) {
-  const el = document.getElementById(inputId);
-  if (!(el instanceof HTMLInputElement)) return;
-
-  const anyEl = el as unknown as { showPicker?: () => void };
-  if (typeof anyEl.showPicker === "function") {
-    anyEl.showPicker();
-    return;
-  }
-
-  el.click();
-}
-
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 MB";
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -254,7 +241,7 @@ export function UploadVideoForm() {
               <div className="mt-2">
                 <a
                   href={`intent://${typeof window !== "undefined" ? window.location.host + window.location.pathname + window.location.search : "dashboard-artist.vercel.app"}#Intent;scheme=https;package=com.android.chrome;end`}
-                  className="inline-flex items-center justify-center rounded-lg bg-white px-3 py-2 text-xs font-semibold text-zinc-900"
+                  className="inline-flex items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs font-semibold text-zinc-100 hover:bg-zinc-800"
                 >
                   Open in Chrome
                 </a>

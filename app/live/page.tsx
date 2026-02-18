@@ -34,7 +34,7 @@ export default async function PublicLiveIndexPage() {
         <div className="space-y-2">
           {res.sessions.map((s) => (
             <div
-              key={s.id}
+              key={s.publicId}
               className="flex items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-950/40 p-4"
             >
               <div>
@@ -52,7 +52,7 @@ export default async function PublicLiveIndexPage() {
               </div>
               <Link
                 className="rounded-lg border border-zinc-800 px-3 py-2 text-sm text-zinc-200 hover:border-zinc-700 hover:bg-zinc-900"
-                href={`/live/${s.id}`}
+                href={`/live/${s.publicId}`}
               >
                 Watch
               </Link>

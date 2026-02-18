@@ -5,6 +5,7 @@ import {
   getEarningsSummaryForArtist,
   getGeoBreakdownForArtist,
   getPerContentStatsForArtist,
+  getLiveViewsAllTimeForArtist,
   getStreamsTrendForArtist,
 } from "../../../../lib/analytics/insights";
 import { listSongs } from "../../../../lib/content/songs";
@@ -21,7 +22,16 @@ export async function getContentStats(artistUid: string) {
     const db = getFirebaseAdminFirestore();
     if (!db) return null;
 
-    const [songs, videos] = await Promise.all([listSongs(artistUid), listVideos(artistUid)]);
+    const [songs, videos, liveViewsAllTime] = await Promise.all([
+      listSongs(artistUid),
+      listVideos(artistUid),
+      getLiveViewsAllTimeForArtist(artistUid),
+    ]);
+
+    const totalSongPlays = songs.reduce((sum, s) => sum + (s.plays ?? 0), 0);
+    const totalVideoPlays = videos.reduce((sum, v) => sum + (v.views ?? 0), 0);
+    const totalSongLikes = songs.reduce((sum, s) => sum + (s.likes ?? 0), 0);
+    const totalVideoLikes = videos.reduce((sum, v) => sum + (v.likes ?? 0), 0);
 
     const songItems = songs.map((s) => ({
       id: s.id,
@@ -51,6 +61,12 @@ export async function getContentStats(artistUid: string) {
       items,
       totalSongs: songs.length,
       totalVideos: videos.length,
+      totalPlays:
+        totalSongPlays +
+        totalVideoPlays +
+        (typeof liveViewsAllTime.total === "number" ? liveViewsAllTime.total : 0),
+      totalLikes: totalSongLikes + totalVideoLikes,
+      liveViewsAllTime: liveViewsAllTime.total,
     };
   } catch (err) {
     console.error("Content stats error:", err);
@@ -134,9 +150,10 @@ export async function getAudienceDemographics(artistUid: string, limit = 5) {
 
 export async function getEngagementMetrics(artistUid: string) {
   try {
-    const [trend7d, trend30d, perContent30d] = await Promise.all([
+    const [trend7d, trend30d, trend60d, perContent30d] = await Promise.all([
       getStreamsTrendForArtist(artistUid, 7),
       getStreamsTrendForArtist(artistUid, 30),
+      getStreamsTrendForArtist(artistUid, 60),
       getPerContentStatsForArtist(artistUid, 30),
     ]);
 
@@ -145,11 +162,24 @@ export async function getEngagementMetrics(artistUid: string) {
     const comments30d =
       perContent30d.source === "none" ? null : allStats.reduce((sum, s) => sum + (s.comments ?? 0), 0);
 
+    let monthlyGrowthPct: number | null = null;
+    if (trend30d.source !== "none" && trend60d.source !== "none") {
+      const current = trend30d.total;
+      const total60 = trend60d.total;
+      if (current !== null && total60 !== null) {
+        const prev = total60 - current;
+        if (prev > 0) {
+          monthlyGrowthPct = ((current - prev) / prev) * 100;
+        }
+      }
+    }
+
     return {
       plays7d: trend7d.total,
       plays30d: trend30d.total,
       likes30d,
       comments30d,
+      monthlyGrowthPct,
     };
   } catch (err) {
     console.error("Engagement metrics error:", err);

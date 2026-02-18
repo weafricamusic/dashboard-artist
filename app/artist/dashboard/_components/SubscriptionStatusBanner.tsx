@@ -21,8 +21,8 @@ export async function SubscriptionStatusBanner({
   const planLabel = sub.planName || sub.planCode;
   const expiry = sub.planCode === "free" ? null : formatExpiry(sub.expiresAt);
 
-  const showUpgrade = sub.planCode === "free" || sub.planCode === "premium";
-  const ctaLabel = sub.planCode === "free" ? "Upgrade" : "Upgrade to Platinum";
+  const showUpgrade = sub.planCode === "free" || sub.planCode === "premium" || sub.planCode === "pro";
+  const ctaLabel = sub.planCode === "free" ? "Upgrade" : sub.planCode === "pro" ? "Upgrade to Elite" : "Upgrade to Platinum";
 
   return (
     <div className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
@@ -49,7 +49,7 @@ export async function SubscriptionStatusBanner({
           {showUpgrade ? (
             <Link
               href="/artist/dashboard/subscription"
-              className="inline-flex h-10 items-center justify-center rounded-xl bg-white px-4 text-sm font-semibold text-zinc-900 hover:bg-zinc-100"
+              className="inline-flex h-10 items-center justify-center rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white hover:bg-violet-500"
             >
               {ctaLabel}
             </Link>

@@ -4,10 +4,17 @@ import { fileURLToPath } from "url";
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
+const useTurbopack = process.env.NEXT_USE_TURBOPACK === "1";
+
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: projectRoot,
-  },
+  outputFileTracingRoot: projectRoot,
+  ...(useTurbopack
+    ? {
+        turbopack: {
+          root: projectRoot,
+        },
+      }
+    : {}),
   experimental: {
     // Upload flows use Server Actions with `FormData` containing media files.
     // The default limit is 1MB, which is too small for MP3/MP4 uploads.

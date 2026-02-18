@@ -2,8 +2,10 @@ import { requireArtistSession } from "../../../lib/auth/artist";
 import { getArtistProfile } from "../../../lib/profile/artist";
 import { getArtistSubscriptionStatus } from "../../../lib/subscriptions/artist";
 import { hasFeature } from "../../../lib/subscriptions/features";
+import { hasAcceptedLatestLegal } from "../../../lib/legal/acceptance";
 import { DashboardShell } from "@/app/artist/dashboard/_components/DashboardShell";
 import { SubscriptionStatusBanner } from "./_components/SubscriptionStatusBanner";
+import { redirect } from "next/navigation";
 
 export default async function ArtistDashboardLayout({
   children,
@@ -11,6 +13,12 @@ export default async function ArtistDashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await requireArtistSession();
+
+  const hasAccepted = await hasAcceptedLatestLegal(session.user.uid);
+  if (!hasAccepted) {
+    redirect("/artist/legal-consent");
+  }
+
   const profileRes = await getArtistProfile(session.user.uid);
   const subscription = await getArtistSubscriptionStatus(session.user.uid);
   const verified = Boolean(profileRes.profile?.verificationBadge);

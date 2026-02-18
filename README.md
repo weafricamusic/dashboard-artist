@@ -58,7 +58,7 @@ If you want **everyone to login/sign up in the Flutter consumer app**, use the d
 - Env vars:
 	- `WEAFRICA_ARTIST_DASHBOARD_URL` (preferred; the deployed base URL of this dashboard)
 	- `ARTIST_DASHBOARD_URL` (backward-compatible alias)
-	- `CONSUMER_APP_CONNECT_URL` (the consumer app URL/deeplink that initiates login)
+	- `CONSUMER_APP_CONNECT_URL` (the consumer app deep link that initiates login, e.g. `weafrica://connect`)
 
 The dashboard will redirect the browser to `CONSUMER_APP_CONNECT_URL` and include a query param:
 
@@ -67,6 +67,10 @@ The dashboard will redirect the browser to `CONSUMER_APP_CONNECT_URL` and includ
 After the user signs in, the Flutter app should open `returnTo` and append:
 
 - `token=<FirebaseIDToken>`
+
+Example redirect produced by the dashboard:
+
+- `weafrica://connect?returnTo=https%3A%2F%2Fdashboard.example.com%2Fauth%2Fconsume%3Fredirect%3D%2Fartist%2Fdashboard%2Foverview`
 
 Debug endpoint:
 
@@ -172,7 +176,20 @@ The Earnings page can submit payout requests and show payout history via a Supab
 The Live page can schedule sessions and show upcoming/history via Supabase.
 
 - Create the table by running [supabase/migrations/20260114_0002_create_live_sessions.sql](supabase/migrations/20260114_0002_create_live_sessions.sql) in the Supabase SQL editor.
+- Also run [supabase/migrations/20260216_0001_live_sessions_public_code.sql](supabase/migrations/20260216_0001_live_sessions_public_code.sql) so public watch links do not expose internal UUIDs.
 - Ensure the dashboard has `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` set in `.env.local`.
+
+## Subscriptions (Supabase)
+
+The Subscription page reads the artist's plan from Supabase.
+
+- Create the tables by running [supabase/migrations/20260115_0006_create_subscriptions.sql](supabase/migrations/20260115_0006_create_subscriptions.sql) in the Supabase SQL editor.
+	- This creates both `subscriptions` and `user_subscriptions`.
+- Ensure the dashboard has `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` set in `.env.local`.
+
+Optional local convenience:
+
+- Set `SUPABASE_DB_URL` and run `npm run db:migrate` to apply all SQL files under `supabase/migrations/`.
 
 ## Upload processing pipeline (Supabase + FFmpeg)
 

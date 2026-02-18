@@ -46,12 +46,15 @@ export function GoLiveSection() {
         const responseData = await response.json();
 
         if (responseData.ok && responseData.session) {
+          const publicCode = String(responseData.session.id ?? "").trim();
+          const channelId = String(responseData.session.channelId ?? publicCode).trim();
+
           // Store session data in sessionStorage for the broadcast page
           sessionStorage.setItem(
             "liveSession",
             JSON.stringify({
-              sessionId: responseData.session.id,
-              channelId: responseData.session.channelId,
+              publicCode,
+              channelId,
               agoraToken: responseData.session.agoraToken,
               uid: responseData.session.uid,
               title: responseData.session.title,
@@ -63,7 +66,7 @@ export function GoLiveSection() {
 
           // Navigate to the broadcast page
           router.push(
-            `/artist/dashboard/live/broadcast?sessionId=${responseData.session.id}`
+            `/artist/dashboard/live/broadcast?sessionId=${encodeURIComponent(publicCode)}`
           );
         }
       } catch (error) {

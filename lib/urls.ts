@@ -32,6 +32,24 @@ export function getArtistDashboardBaseUrl(): string | undefined {
 }
 
 export function getConsumerAppConnectUrl(): string | undefined {
-  const value = getOptionalEnv("CONSUMER_APP_CONNECT_URL");
-  return value ? normalizeUrl(value, "CONSUMER_APP_CONNECT_URL") : undefined;
+  const candidates: Array<[string, string | undefined]> = [
+    ["CONSUMER_APP_CONNECT_URL", getOptionalEnv("CONSUMER_APP_CONNECT_URL")],
+    // Common alias when folks assume it must be public.
+    [
+      "NEXT_PUBLIC_CONSUMER_APP_CONNECT_URL",
+      getOptionalEnv("NEXT_PUBLIC_CONSUMER_APP_CONNECT_URL"),
+    ],
+    // Optional WeAfrica-prefixed alias (mirrors WEAFRICA_ARTIST_DASHBOARD_URL).
+    [
+      "WEAFRICA_CONSUMER_APP_CONNECT_URL",
+      getOptionalEnv("WEAFRICA_CONSUMER_APP_CONNECT_URL"),
+    ],
+  ];
+
+  for (const [envName, value] of candidates) {
+    if (!value) continue;
+    return normalizeUrl(value, envName);
+  }
+
+  return undefined;
 }

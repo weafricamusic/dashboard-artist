@@ -19,8 +19,9 @@ function safeRedirectParam(searchParams?: SearchParams): string {
 export default async function Home({
   searchParams,
 }: {
-  searchParams?: SearchParams;
+  searchParams?: Promise<SearchParams>;
 }) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const cookieName = getAuthCookieName();
   const cookieStore = await cookies();
   const hasSessionCookie = Boolean(cookieStore.get(cookieName)?.value);
@@ -33,16 +34,16 @@ export default async function Home({
     consumerConnectConfigured = false;
   }
 
-  const redirectTo = safeRedirectParam(searchParams);
+  const redirectTo = safeRedirectParam(resolvedSearchParams);
   const connectHref = `/auth/connect?mode=login&redirect=${encodeURIComponent(
     redirectTo,
   )}`;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-6 py-14">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-zinc-900">WeAfrica Artist Dashboard</h1>
-        <p className="mt-2 text-sm leading-6 text-zinc-600">
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold text-white">WeAfrica Artist Dashboard</h1>
+        <p className="mt-2 text-sm leading-6 text-zinc-300">
           Sign in happens in the WeAfrica Music mobile app. Once you’re signed in, you’ll be
           redirected back here automatically.
         </p>
@@ -57,13 +58,13 @@ export default async function Home({
             </Link>
           ) : (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
-              Mobile app connect is not configured (missing or invalid
+              Mobile app connect is not configured (missing or invalid{" "}
               <code className="mx-1">CONSUMER_APP_CONNECT_URL</code>).
             </div>
           )}
           <Link
             href="/auth/me"
-            className="inline-flex items-center justify-center rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50"
+            className="inline-flex items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950/40 px-4 py-2 text-sm font-medium text-zinc-200 hover:border-zinc-700 hover:bg-zinc-900"
           >
             Check session
           </Link>

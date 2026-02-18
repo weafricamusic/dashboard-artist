@@ -129,7 +129,7 @@ export default async function MyUploadsPage({
               className={
                 "rounded-full px-4 py-2 text-sm font-semibold transition " +
                 (isActive
-                  ? "bg-white text-zinc-900"
+                  ? "border border-zinc-700 bg-zinc-900 text-white"
                   : "border border-zinc-800 bg-zinc-950/40 text-zinc-300 hover:border-zinc-700")
               }
             >

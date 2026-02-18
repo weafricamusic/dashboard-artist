@@ -99,9 +99,9 @@ export function LoginClient() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-semibold">Artist Login</h1>
-        <p className="mt-1 text-sm text-zinc-600">
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 shadow-sm">
+        <h1 className="text-xl font-semibold text-white">Artist Login</h1>
+        <p className="mt-1 text-sm text-zinc-300">
           Sign in with your WeAfrica Artist account.
         </p>
 
@@ -128,9 +128,9 @@ export function LoginClient() {
 
         <form className="mt-5 space-y-3" onSubmit={handleEmailLogin}>
           <label className="block">
-            <div className="text-sm font-medium text-zinc-700">Email</div>
+            <div className="text-sm font-medium text-white">Email</div>
             <input
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -141,9 +141,9 @@ export function LoginClient() {
           </label>
 
           <label className="block">
-            <div className="text-sm font-medium text-zinc-700">Password</div>
+            <div className="text-sm font-medium text-white">Password</div>
             <input
-              className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-900"
+              className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-zinc-700"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -154,7 +154,7 @@ export function LoginClient() {
           </label>
 
           <button
-            className="w-full rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60"
+            className="w-full rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-60"
             type="submit"
             disabled={!hasFirebaseWebConfig || isLoading}
           >
@@ -163,13 +163,13 @@ export function LoginClient() {
         </form>
 
         <div className="my-4 flex items-center gap-3">
-          <div className="h-px flex-1 bg-zinc-200" />
-          <div className="text-xs text-zinc-500">or</div>
-          <div className="h-px flex-1 bg-zinc-200" />
+          <div className="h-px flex-1 bg-zinc-800" />
+          <div className="text-xs text-zinc-400">or</div>
+          <div className="h-px flex-1 bg-zinc-800" />
         </div>
 
         <button
-          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-60"
+          className="w-full rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-zinc-700 hover:bg-zinc-900 disabled:opacity-60"
           type="button"
           onClick={handleGoogleLogin}
           disabled={!hasFirebaseWebConfig || isLoading}
@@ -177,7 +177,7 @@ export function LoginClient() {
           Continue with Google
         </button>
 
-        <p className="mt-4 text-xs text-zinc-500">
+        <p className="mt-4 text-xs text-zinc-400">
           Admin approval may be required before you can access certain features.
         </p>
       </div>

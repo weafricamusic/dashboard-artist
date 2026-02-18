@@ -5,7 +5,7 @@ import { getSupabaseAdminClient } from "../supabase/admin";
 export type LiveSessionStatus = "scheduled" | "live" | "ended" | "cancelled";
 
 export type LiveSession = {
-  id: string;
+  publicId: string;
   artistUid: string;
   status: LiveSessionStatus;
   title: string;
@@ -20,6 +20,11 @@ export type PublicLiveSession = Omit<LiveSession, "notes">;
 
 type UnknownRecord = Record<string, unknown>;
 
+type SupabaseResult<TData> = {
+  data: TData | null;
+  error: { message?: string } | null;
+};
+
 function asRecord(value: unknown): UnknownRecord | null {
   if (!value || typeof value !== "object") return null;
   return value as UnknownRecord;
@@ -31,12 +36,28 @@ function readString(value: unknown): string | null {
 
 function isMissingTableError(message: string): boolean {
   const m = message.toLowerCase();
+
+  if (m.includes("column") && m.includes("does not exist")) {
+    return false;
+  }
+
   return (
-    m.includes("does not exist") ||
-    m.includes("could not find") ||
-    m.includes("unknown table") ||
-    (m.includes("relation") && m.includes("live_sessions"))
+    m.includes('relation "live_sessions" does not exist') ||
+    m.includes('relation "public.live_sessions" does not exist') ||
+    (m.includes("relation") && m.includes("live_sessions") && m.includes("does not exist")) ||
+    ((m.includes("could not find") || m.includes("unknown table") || m.includes("table")) &&
+      m.includes("live_sessions") &&
+      m.includes("does not exist"))
   );
+}
+
+function isMissingPublicCodeError(message: string): boolean {
+  const m = message.toLowerCase();
+  return m.includes("public_code") && m.includes("does not exist");
+}
+
+function readSessionPublicId(row: UnknownRecord): string {
+  return readString(row.public_code) ?? readString(row.id) ?? "";
 }
 
 function toStatus(value: unknown): LiveSessionStatus {
@@ -48,7 +69,7 @@ function toStatus(value: unknown): LiveSessionStatus {
 
 function mapRowToLiveSession(r: UnknownRecord, fallbackArtistUid: string): LiveSession {
   return {
-    id: readString(r.id) ?? "",
+    publicId: readSessionPublicId(r),
     artistUid: readString(r.artist_uid) ?? fallbackArtistUid,
     status: toStatus(r.status),
     title: readString(r.title) ?? "",
@@ -72,7 +93,7 @@ export async function listLiveSessionsForArtist(
 
   let q = supabase
     .from("live_sessions")
-    .select("id,artist_uid,status,title,starts_at,ends_at,event_url,notes,created_at")
+    .select("id,public_code,artist_uid,status,title,starts_at,ends_at,event_url,notes,created_at")
     .eq("artist_uid", artistUid)
     .limit(limit);
 
@@ -84,15 +105,33 @@ export async function listLiveSessionsForArtist(
     q = q.order("starts_at", { ascending: false });
   }
 
-  const res = await q;
+  let res = (await q) as unknown as { data: unknown[] | null; error: { message?: string } | null };
+
+  if (res.error && isMissingPublicCodeError(res.error.message ?? "")) {
+    let legacyQ = supabase
+      .from("live_sessions")
+      .select("id,artist_uid,status,title,starts_at,ends_at,event_url,notes,created_at")
+      .eq("artist_uid", artistUid)
+      .limit(limit);
+
+    if (onlyUpcoming) {
+      legacyQ = legacyQ
+        .in("status", ["scheduled", "live"])
+        .order("starts_at", { ascending: true });
+    } else {
+      legacyQ = legacyQ.order("starts_at", { ascending: false });
+    }
+
+    res = (await legacyQ) as unknown as { data: unknown[] | null; error: { message?: string } | null };
+  }
 
   if (res.error) {
     const msg = res.error.message ?? "Failed to load live sessions";
-    if (isMissingTableError(msg)) {
+    if (isMissingTableError(msg) || isMissingPublicCodeError(msg)) {
       return {
         sessions: [],
         source: "none",
-        error: "Live scheduling is not configured in Supabase yet (missing live_sessions table).",
+        error: "Live scheduling is not configured in Supabase yet (missing required live_sessions schema).",
       };
     }
     return { sessions: [], source: "none", error: msg };
@@ -115,28 +154,39 @@ export async function listPublicLiveSessions(opts?: {
 
   const res = await supabase
     .from("live_sessions")
-    .select("id,artist_uid,status,title,starts_at,ends_at,event_url,created_at")
+    .select("id,public_code,artist_uid,status,title,starts_at,ends_at,event_url,created_at")
     .in("status", ["scheduled", "live"])
     .order("starts_at", { ascending: true })
     .limit(limit);
 
-  if (res.error) {
-    const msg = res.error.message ?? "Failed to load live sessions";
-    if (isMissingTableError(msg)) {
+  let resolvedRes = res as unknown as { data: unknown[] | null; error: { message?: string } | null };
+
+  if (resolvedRes.error && isMissingPublicCodeError(resolvedRes.error.message ?? "")) {
+    resolvedRes = (await supabase
+      .from("live_sessions")
+      .select("id,artist_uid,status,title,starts_at,ends_at,event_url,created_at")
+      .in("status", ["scheduled", "live"])
+      .order("starts_at", { ascending: true })
+      .limit(limit)) as unknown as { data: unknown[] | null; error: { message?: string } | null };
+  }
+
+  if (resolvedRes.error) {
+    const msg = resolvedRes.error.message ?? "Failed to load live sessions";
+    if (isMissingTableError(msg) || isMissingPublicCodeError(msg)) {
       return {
         sessions: [],
         source: "none",
-        error: "Live scheduling is not configured in Supabase yet (missing live_sessions table).",
+        error: "Live scheduling is not configured in Supabase yet (missing required live_sessions schema).",
       };
     }
     return { sessions: [], source: "none", error: msg };
   }
 
-  const rows = (res.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
+  const rows = (resolvedRes.data ?? []).map(asRecord).filter((r): r is UnknownRecord => r !== null);
   const sessions: PublicLiveSession[] = rows.map((r) => {
     const artistUid = readString(r.artist_uid) ?? "";
     return {
-      id: readString(r.id) ?? "",
+      publicId: readSessionPublicId(r),
       artistUid,
       status: toStatus(r.status),
       title: readString(r.title) ?? "",
@@ -150,42 +200,53 @@ export async function listPublicLiveSessions(opts?: {
   return { sessions, source: "supabase" };
 }
 
-export async function getPublicLiveSessionById(
-  sessionId: string,
+export async function getPublicLiveSessionByCode(
+  publicCode: string,
 ): Promise<{ session: PublicLiveSession | null; source: "supabase" | "none"; error?: string }> {
   const supabase = getSupabaseAdminClient();
   if (!supabase) return { session: null, source: "none" };
 
-  const id = sessionId.trim();
-  if (!id) return { session: null, source: "none", error: "Invalid session id." };
+  const code = publicCode.trim();
+  if (!code) return { session: null, source: "none", error: "Invalid session code." };
 
   const res = await supabase
     .from("live_sessions")
-    .select("id,artist_uid,status,title,starts_at,ends_at,event_url,created_at")
-    .eq("id", id)
+    .select("id,public_code,artist_uid,status,title,starts_at,ends_at,event_url,created_at")
+    .eq("public_code", code)
     .limit(1)
     .maybeSingle();
 
-  if (res.error) {
-    const msg = res.error.message ?? "Failed to load live session";
-    if (isMissingTableError(msg)) {
+  let resolvedRes = res as unknown as { data: unknown | null; error: { message?: string } | null };
+
+  if (resolvedRes.error && isMissingPublicCodeError(resolvedRes.error.message ?? "")) {
+    resolvedRes = (await supabase
+      .from("live_sessions")
+      .select("id,artist_uid,status,title,starts_at,ends_at,event_url,created_at")
+      .eq("id", code)
+      .limit(1)
+      .maybeSingle()) as unknown as { data: unknown | null; error: { message?: string } | null };
+  }
+
+  if (resolvedRes.error) {
+    const msg = resolvedRes.error.message ?? "Failed to load live session";
+    if (isMissingTableError(msg) || isMissingPublicCodeError(msg)) {
       return {
         session: null,
         source: "none",
-        error: "Live scheduling is not configured in Supabase yet (missing live_sessions table).",
+        error: "Live scheduling is not configured in Supabase yet (missing required live_sessions schema).",
       };
     }
     return { session: null, source: "none", error: msg };
   }
 
-  if (!res.data) return { session: null, source: "supabase" };
+  if (!resolvedRes.data) return { session: null, source: "supabase" };
 
-  const rec = asRecord(res.data);
+  const rec = asRecord(resolvedRes.data);
   if (!rec) return { session: null, source: "supabase" };
 
   const artistUid = readString(rec.artist_uid) ?? "";
   const session: PublicLiveSession = {
-    id: readString(rec.id) ?? "",
+    publicId: readSessionPublicId(rec),
     artistUid,
     status: toStatus(rec.status),
     title: readString(rec.title) ?? "",
@@ -197,9 +258,58 @@ export async function getPublicLiveSessionById(
   return { session, source: "supabase" };
 }
 
+async function resolveInternalSessionIdForArtist(
+  artistUid: string,
+  sessionPublicId: string,
+): Promise<
+  | { ok: true; id: string }
+  | { ok: false; reason: "not_configured" | "invalid" | "not_found" | "unknown"; message: string }
+> {
+  const supabase = getSupabaseAdminClient();
+  if (!supabase) {
+    return {
+      ok: false,
+      reason: "not_configured",
+      message: "Supabase is not configured (missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY).",
+    };
+  }
+
+  const code = sessionPublicId.trim();
+  if (!code) return { ok: false, reason: "invalid", message: "Invalid session code." };
+
+  const res = await supabase
+    .from("live_sessions")
+    .select("id")
+    .eq("public_code", code)
+    .eq("artist_uid", artistUid)
+    .limit(1)
+    .maybeSingle();
+
+  let resolvedRes = res as unknown as SupabaseResult<unknown>;
+  if (resolvedRes.error && isMissingPublicCodeError(resolvedRes.error.message ?? "")) {
+    resolvedRes = (await supabase
+      .from("live_sessions")
+      .select("id")
+      .eq("id", code)
+      .eq("artist_uid", artistUid)
+      .limit(1)
+      .maybeSingle()) as unknown as SupabaseResult<unknown>;
+  }
+
+  if (resolvedRes.error) {
+    return { ok: false, reason: "unknown", message: resolvedRes.error.message ?? "Failed to resolve session" };
+  }
+  if (!resolvedRes.data) return { ok: false, reason: "not_found", message: "Session not found." };
+
+  const rec = asRecord(resolvedRes.data);
+  const id = rec ? readString(rec.id) : null;
+  if (!id) return { ok: false, reason: "unknown", message: "Failed to resolve session." };
+  return { ok: true, id };
+}
+
 export async function updateLiveSessionStatusForArtist(
   artistUid: string,
-  input: { sessionId: string; status: LiveSessionStatus },
+  input: { sessionPublicId: string; status: LiveSessionStatus },
 ): Promise<
   | { ok: true }
   | { ok: false; reason: "not_configured" | "invalid" | "not_found" | "unknown"; message: string }
@@ -213,8 +323,9 @@ export async function updateLiveSessionStatusForArtist(
     };
   }
 
-  const id = input.sessionId.trim();
-  if (!id) return { ok: false, reason: "invalid", message: "Invalid session id." };
+  const resolved = await resolveInternalSessionIdForArtist(artistUid, input.sessionPublicId);
+  if (!resolved.ok) return resolved;
+  const id = resolved.id;
 
   const status = input.status;
   if (status !== "scheduled" && status !== "live" && status !== "ended" && status !== "cancelled") {
@@ -253,7 +364,7 @@ export async function createLiveNowForArtist(
     notes?: string;
   },
 ): Promise<
-  | { ok: true; id: string }
+  | { ok: true; publicId: string }
   | { ok: false; reason: "not_configured" | "table_missing" | "invalid" | "unknown"; message: string }
 > {
   const supabase = getSupabaseAdminClient();
@@ -279,23 +390,28 @@ export async function createLiveNowForArtist(
     notes: input.notes?.trim() || null,
   };
 
-  const res = await supabase.from("live_sessions").insert(payload).select("id").single();
+  const res = await supabase.from("live_sessions").insert(payload).select("id,public_code").single();
 
-  if (res.error) {
-    const msg = res.error.message ?? "Failed to start live session";
-    if (isMissingTableError(msg)) {
+  let resolvedRes = res as unknown as SupabaseResult<unknown>;
+  if (resolvedRes.error && isMissingPublicCodeError(resolvedRes.error.message ?? "")) {
+    resolvedRes = (await supabase.from("live_sessions").insert(payload).select("id").single()) as unknown as SupabaseResult<unknown>;
+  }
+
+  if (resolvedRes.error) {
+    const msg = resolvedRes.error.message ?? "Failed to start live session";
+    if (isMissingTableError(msg) || isMissingPublicCodeError(msg)) {
       return {
         ok: false,
         reason: "table_missing",
-        message: "Supabase table live_sessions is missing. Create it to enable live streaming.",
+        message: "Supabase live_sessions schema is missing required migrations. Apply Supabase migrations to enable live streaming.",
       };
     }
     return { ok: false, reason: "unknown", message: msg };
   }
 
-  const rec = asRecord(res.data);
-  const id = rec ? readString(rec.id) : null;
-  return { ok: true, id: id ?? "" };
+  const rec = asRecord(resolvedRes.data);
+  const publicId = rec ? readSessionPublicId(rec) : null;
+  return { ok: true, publicId: publicId ?? "" };
 }
 
 export async function createLiveSessionForArtist(
@@ -307,7 +423,7 @@ export async function createLiveSessionForArtist(
     notes?: string;
   },
 ): Promise<
-  | { ok: true; id: string }
+  | { ok: true; publicId: string }
   | { ok: false; reason: "not_configured" | "table_missing" | "invalid" | "unknown"; message: string }
 > {
   const supabase = getSupabaseAdminClient();
@@ -338,21 +454,26 @@ export async function createLiveSessionForArtist(
     notes: input.notes?.trim() || null,
   };
 
-  const res = await supabase.from("live_sessions").insert(payload).select("id").single();
+  const res = await supabase.from("live_sessions").insert(payload).select("id,public_code").single();
 
-  if (res.error) {
-    const msg = res.error.message ?? "Failed to schedule live session";
-    if (isMissingTableError(msg)) {
+  let resolvedRes = res as unknown as SupabaseResult<unknown>;
+  if (resolvedRes.error && isMissingPublicCodeError(resolvedRes.error.message ?? "")) {
+    resolvedRes = (await supabase.from("live_sessions").insert(payload).select("id").single()) as unknown as SupabaseResult<unknown>;
+  }
+
+  if (resolvedRes.error) {
+    const msg = resolvedRes.error.message ?? "Failed to schedule live session";
+    if (isMissingTableError(msg) || isMissingPublicCodeError(msg)) {
       return {
         ok: false,
         reason: "table_missing",
-        message: "Supabase table live_sessions is missing. Create it to enable scheduling.",
+        message: "Supabase live_sessions schema is missing required migrations. Apply Supabase migrations to enable scheduling.",
       };
     }
     return { ok: false, reason: "unknown", message: msg };
   }
 
-  const rec = asRecord(res.data);
-  const id = rec ? readString(rec.id) : null;
-  return { ok: true, id: id ?? "" };
+  const rec = asRecord(resolvedRes.data);
+  const publicId = rec ? readSessionPublicId(rec) : null;
+  return { ok: true, publicId: publicId ?? "" };
 }

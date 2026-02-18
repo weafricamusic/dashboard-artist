@@ -36,7 +36,7 @@ export function LineChart({
       height={height}
       role="img"
       aria-label="Trend chart"
-      className="text-zinc-900/70"
+      className="text-zinc-200/70"
     >
       <path d={d} fill="none" stroke={stroke} strokeWidth={2.5} />
       <path

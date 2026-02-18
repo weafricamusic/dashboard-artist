@@ -389,6 +389,9 @@ export default function SettingsClient({
             <Link className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-100 hover:bg-white/5" href="/legal/terms">
               Terms of Service
             </Link>
+            <Link className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-100 hover:bg-white/5" href="/legal/platform-policy">
+              Platform Policy
+            </Link>
             <Link className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-100 hover:bg-white/5" href="/legal/privacy">
               Privacy Policy
             </Link>
@@ -397,6 +400,87 @@ export default function SettingsClient({
             </Link>
             <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-zinc-300">
               App version: <span className="font-mono">{appVersion}</span>
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Earnings & Payments" description="Payout and payment settings for monetization.">
+          <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+            <div className="text-sm font-medium text-white">Payment settings</div>
+            <div className="mt-1 text-xs text-zinc-400">Add and manage payout methods (bank and mobile money).</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 opacity-60"
+                disabled
+              >
+                Linked bank account (soon)
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 opacity-60"
+                disabled
+              >
+                Mobile money (soon)
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 opacity-60"
+                disabled
+              >
+                Tax information (soon)
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+            <div className="text-sm font-medium text-white">Payout preferences</div>
+            <div className="mt-1 text-xs text-zinc-400">Choose how you want withdrawals handled.</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 opacity-60"
+                disabled
+              >
+                Manual withdrawal (soon)
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 opacity-60"
+                disabled
+              >
+                Auto payout monthly (soon)
+              </button>
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Account Security" description="Protect your account as you start earning.">
+          <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3">
+            <div className="text-sm font-medium text-white">Security controls</div>
+            <div className="mt-1 text-xs text-zinc-400">More security features will appear here as they roll out.</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 opacity-60"
+                disabled
+              >
+                Enable 2FA (soon)
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 opacity-60"
+                disabled
+              >
+                Active sessions (soon)
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-zinc-100 opacity-60"
+                disabled
+              >
+                Login history (soon)
+              </button>
             </div>
           </div>
         </Card>

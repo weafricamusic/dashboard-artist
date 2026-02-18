@@ -1,13 +1,6 @@
 import { redirect } from "next/navigation";
 
-type SearchParams = Record<string, string | string[] | undefined>;
-
-export default function ArtistLoginPage({
-  searchParams,
-}: {
-  searchParams?: SearchParams;
-}) {
+export default function ArtistLoginPage() {
   // Login should only happen in the consumer app. Send users to homepage.
-  void searchParams;
   redirect("/");
 }

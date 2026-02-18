@@ -1,14 +1,14 @@
-import { NextResponse } from "next/server";
-import { getFirebaseAdminAuth } from "../../../lib/firebase/admin";
+import { NextRequest, NextResponse } from "next/server";
 import { generateAgoraToken } from "../../../lib/agora";
 import { getSupabaseAdminClient } from "../../../lib/supabase/admin";
+import { requireVerifiedArtistFromRequest } from "../../../lib/auth/request";
 
 interface GoLiveRequest {
   title: string;
   notes?: string;
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as GoLiveRequest;
     const title = String(body?.title ?? "").trim();
@@ -21,36 +21,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get the authorization header
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Unauthorized: Missing or invalid bearer token" },
-        { status: 401 }
-      );
+    const verified = await requireVerifiedArtistFromRequest(request);
+    if (!verified.ok) {
+      return NextResponse.json({ error: verified.error }, { status: verified.status });
     }
-
-    const idToken = authHeader.slice(7);
-
-    // Verify the token
-    let uid: string;
-    try {
-      const auth = getFirebaseAdminAuth();
-      if (!auth) {
-        return NextResponse.json(
-          { error: "Firebase not configured" },
-          { status: 500 }
-        );
-      }
-      const decodedToken = await auth.verifyIdToken(idToken);
-      uid = decodedToken.uid;
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Invalid token";
-      return NextResponse.json(
-        { error: `Authentication failed: ${errorMsg}` },
-        { status: 401 }
-      );
-    }
+    const uid = verified.artist.uid;
 
     // Create live session in Supabase
     const supabase = getSupabaseAdminClient();
@@ -74,7 +49,7 @@ export async function POST(request: Request) {
     const { data: sessionData, error: dbError } = await supabase
       .from("live_sessions")
       .insert(payload)
-      .select("id")
+      .select("public_code")
       .single();
 
     if (dbError || !sessionData) {
@@ -85,7 +60,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const channelId = sessionData.id;
+    const channelId = (sessionData as unknown as { public_code?: string }).public_code;
+    if (!channelId) {
+      return NextResponse.json({ error: "Failed to allocate public session code" }, { status: 500 });
+    }
 
     // Generate Agora token with the session ID as channel name
     const agoraToken = generateAgoraToken({

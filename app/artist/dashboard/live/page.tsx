@@ -41,10 +41,10 @@ export default async function ArtistLivePage({
 
     const session = await requireArtistSession();
 
-    const sessionId = String(formData.get("sessionId") ?? "").trim();
+    const sessionPublicId = String(formData.get("sessionPublicId") ?? "").trim();
     const status = String(formData.get("status") ?? "").trim() as LiveSessionStatus;
 
-    const res = await updateLiveSessionStatusForArtist(session.user.uid, { sessionId, status });
+    const res = await updateLiveSessionStatusForArtist(session.user.uid, { sessionPublicId, status });
     if (!res.ok) {
       const msg = encodeURIComponent(res.message);
       redirect(`/artist/dashboard/live?live_error=${msg}`);
@@ -110,12 +110,12 @@ export default async function ArtistLivePage({
 
     const session = await requireArtistSession();
 
-    const sessionId = String(formData.get("sessionId") ?? "").trim();
-    if (!sessionId) {
+    const sessionPublicId = String(formData.get("sessionPublicId") ?? "").trim();
+    if (!sessionPublicId) {
       redirect("/artist/dashboard/live?live_error=Missing%20session%20id");
     }
 
-    const res = await updateLiveSessionStatusForArtist(session.user.uid, { sessionId, status: "ended" });
+    const res = await updateLiveSessionStatusForArtist(session.user.uid, { sessionPublicId, status: "ended" });
     if (!res.ok) {
       const msg = encodeURIComponent(res.message);
       redirect(`/artist/dashboard/live?live_error=${msg}`);
@@ -332,7 +332,7 @@ export default async function ArtistLivePage({
                     )}
 
                     {activeBattleId && activeBattleId === b.id ? (
-                      <div className="text-xs text-zinc-500">Channel: {b.id}</div>
+                      <div className="text-xs text-zinc-500">Channel active</div>
                     ) : null}
                   </div>
                 </div>
@@ -362,7 +362,7 @@ export default async function ArtistLivePage({
                 Started {new Date(currentLive.startsAt).toLocaleString()}
               </div>
               <form action={endLiveNow} className="mt-3">
-                <input type="hidden" name="sessionId" value={currentLive.id} />
+                <input type="hidden" name="sessionPublicId" value={currentLive.publicId} />
                 <button className="rounded-lg border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-zinc-700 hover:bg-zinc-900">
                   End Stream
                 </button>
@@ -543,7 +543,7 @@ export default async function ArtistLivePage({
                 </thead>
                 <tbody>
                   {history.sessions.map((s) => (
-                    <tr key={s.id} className="border-b border-zinc-900">
+                    <tr key={s.publicId} className="border-b border-zinc-900">
                       <td className="py-2 pr-3 text-zinc-300">
                         {new Date(s.startsAt).toLocaleString()}
                       </td>
@@ -551,7 +551,7 @@ export default async function ArtistLivePage({
                       <td className="py-2 pr-3 text-zinc-300">{s.status}</td>
                       <td className="py-2 text-zinc-300">
                         <div className="flex items-center gap-3">
-                          <a className="text-zinc-200 underline" href={`/live/${s.id}`} target="_blank" rel="noreferrer">
+                          <a className="text-zinc-200 underline" href={`/live/${s.publicId}`} target="_blank" rel="noreferrer">
                             Watch
                           </a>
                           {s.eventUrl ? (
@@ -582,7 +582,7 @@ export default async function ArtistLivePage({
               .slice()
               .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
               .map((s) => (
-                <div key={s.id} className="flex items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-950/30 p-3">
+                <div key={s.publicId} className="flex items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-950/30 p-3">
                   <div>
                     <div className="text-sm font-medium text-white">{s.title}</div>
                     <div className="mt-1 text-xs text-zinc-500">{new Date(s.startsAt).toLocaleString()} · {s.status}</div>
@@ -590,7 +590,7 @@ export default async function ArtistLivePage({
                   <div className="flex items-center gap-2">
                     <a
                       className="rounded-lg border border-zinc-800 px-3 py-2 text-sm text-zinc-200 hover:border-zinc-700 hover:bg-zinc-900"
-                      href={`/live/${s.id}`}
+                      href={`/live/${s.publicId}`}
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -599,7 +599,7 @@ export default async function ArtistLivePage({
 
                     {s.status === "scheduled" ? (
                       <form action={setStatus}>
-                        <input type="hidden" name="sessionId" value={s.id} />
+                        <input type="hidden" name="sessionPublicId" value={s.publicId} />
                         <input type="hidden" name="status" value="live" />
                         <button className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-500">
                           Go Live
@@ -609,7 +609,7 @@ export default async function ArtistLivePage({
 
                     {s.status === "live" ? (
                       <form action={setStatus}>
-                        <input type="hidden" name="sessionId" value={s.id} />
+                        <input type="hidden" name="sessionPublicId" value={s.publicId} />
                         <input type="hidden" name="status" value="ended" />
                         <button className="rounded-lg border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-zinc-700 hover:bg-zinc-900">
                           End
