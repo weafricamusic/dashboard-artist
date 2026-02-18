@@ -58,11 +58,11 @@ If you want **everyone to login/sign up in the Flutter consumer app**, use the d
 - Env vars:
 	- `WEAFRICA_ARTIST_DASHBOARD_URL` (preferred; the deployed base URL of this dashboard)
 	- `ARTIST_DASHBOARD_URL` (backward-compatible alias)
-	- `CONSUMER_APP_CONNECT_URL` (the consumer app deep link that initiates login, e.g. `weafrica://connect`)
+	- `CONSUMER_APP_CONNECT_URL` (or `WEAFRICA_CONSUMER_APP_CONNECT_URL`) — the consumer app deep link base that initiates login, e.g. `weafrica://connect?returnTo=`
 
-The dashboard will redirect the browser to `CONSUMER_APP_CONNECT_URL` and include a query param:
+The dashboard will redirect the browser to `CONSUMER_APP_CONNECT_URL` and set a query param:
 
-- `returnTo=<dashboard>/auth/consume?redirect=...`
+- `returnTo=<dashboard>/auth/consume?redirect=...` (URL-encoded)
 
 After the user signs in, the Flutter app should open `returnTo` and append:
 
@@ -71,6 +71,11 @@ After the user signs in, the Flutter app should open `returnTo` and append:
 Example redirect produced by the dashboard:
 
 - `weafrica://connect?returnTo=https%3A%2F%2Fdashboard.example.com%2Fauth%2Fconsume%3Fredirect%3D%2Fartist%2Fdashboard%2Foverview`
+
+Notes:
+
+- `CONSUMER_APP_CONNECT_URL` may also be set to `weafrica://connect` (without `?returnTo=`). The dashboard will still add `returnTo`.
+- Do not pre-fill a `returnTo` value in the env var; the dashboard will generate it per-request.
 
 Debug endpoint:
 

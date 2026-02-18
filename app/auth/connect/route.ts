@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Consumer app connect URL is not configured. Set CONSUMER_APP_CONNECT_URL.",
+            "Consumer app connect URL is not configured. Set CONSUMER_APP_CONNECT_URL (or WEAFRICA_CONSUMER_APP_CONNECT_URL / NEXT_PUBLIC_CONSUMER_APP_CONNECT_URL).",
         },
         { status: 500, headers: { "cache-control": "no-store" } },
       );
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         To continue, sign in in the WeAfrica Music mobile app, then return here.
       </p>
       <p style="margin: 12px 0 0; line-height: 1.4; color: #52525b;">
-        Admin note: set <code>CONSUMER_APP_CONNECT_URL</code> to enable deep-linking into the app.
+        Admin note: set <code>CONSUMER_APP_CONNECT_URL</code> (or <code>WEAFRICA_CONSUMER_APP_CONNECT_URL</code>) to enable deep-linking into the app.
       </p>
     </div>
   </body>

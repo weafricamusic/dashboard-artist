@@ -23,6 +23,20 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "60mb",
     },
   },
+  async redirects() {
+    return [
+      {
+        source: "/dashboard",
+        destination: "/artist/dashboard",
+        permanent: false,
+      },
+      {
+        source: "/dashboard/:path*",
+        destination: "/artist/dashboard/:path*",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
